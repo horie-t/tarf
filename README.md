@@ -55,3 +55,10 @@ SUBSYSTEM=="tty", ATTRS{idVendor}=="2886", MODE="0666"
 ```bash
 sudo udevadm control --reload-rules
 ```
+
+## 参考情報
+
+* ATSAMDマイコンのRustクレートの[リポジトリ](https://github.com/atsamd-rs/atsamd)  
+  Wio Terminalのクレートもこの中
+
+* wio_terminalクレートの[RustDoc](https://docs.rs/wio_terminal/0.3.0/wio_terminal/)
