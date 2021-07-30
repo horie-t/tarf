@@ -56,6 +56,13 @@ SUBSYSTEM=="tty", ATTRS{idVendor}=="2886", MODE="0666"
 sudo udevadm control --reload-rules
 ```
 
+## 開発記録
+
+| ステップ | 内容 |
+| 1st | [内蔵LEDでLチカ](./firmware/l-chika)をしてみる。 |
+| 2nd | ブレッドボードに接続して、[外部のLEDでLチカ](./firmware/l-chika-external)してみる。 | 
+
+
 ## 参考情報
 
 * ATSAMDマイコンのRustクレートの[リポジトリ](https://github.com/atsamd-rs/atsamd)  
