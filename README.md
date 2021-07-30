@@ -58,9 +58,10 @@ sudo udevadm control --reload-rules
 
 ## 開発記録
 
-| ステップ | 内容 |
-| 1st | [内蔵LEDでLチカ](./firmware/l-chika)をしてみる。 |
-| 2nd | ブレッドボードに接続して、[外部のLEDでLチカ](./firmware/l-chika-external)してみる。 | 
+| ステップ | 内容                                                                                |
+| -------- | ----------------------------------------------------------------------------------- |
+| 1st      | [内蔵LEDでLチカ](./firmware/l-chika)をしてみる。                                    |
+| 2nd      | ブレッドボードに接続して、[外部のLEDでLチカ](./firmware/l-chika-external)してみる。 | 
 
 
 ## 参考情報
