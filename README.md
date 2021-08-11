@@ -66,7 +66,8 @@ sudo udevadm control --reload-rules
 
 ## 参考情報
 
+* embedded-halクレートの[RustDoc](https://docs.rs/embedded-hal/0.2.6/embedded_hal/)
 * ATSAMDマイコンのRustクレートの[リポジトリ](https://github.com/atsamd-rs/atsamd)  
   Wio Terminalのクレートもこの中
-
+* atsamd51pのRustクレートの[RustDoc](https://docs.rs/atsamd51p/0.9.0/atsamd51p/)
 * wio_terminalクレートの[RustDoc](https://docs.rs/wio_terminal/0.3.0/wio_terminal/)
