@@ -4,11 +4,21 @@
 use panic_halt as _;
 use wio_terminal::entry;
 use wio_terminal::hal::clock::GenericClockController;
+use wio_terminal::hal::delay::Delay;
 use wio_terminal::hal::gpio::*;
 use wio_terminal::hal::hal::spi;
 use wio_terminal::hal::sercom::*;
 use wio_terminal::pac::{CorePeripherals, Peripherals};
 use wio_terminal::prelude::*;
+
+fn l6470_send(spi: &mut SPIMaster5<Sercom5Pad2<Pb0<PfD>>, Sercom5Pad0<Pb2<PfD>>, Sercom5Pad1<Pb3<PfD>>>,
+              b : u8,
+              cs: &mut Pb1<Output<PushPull>>) -> () {
+    cs.set_low().unwrap();
+    spi.write(&[b]).unwrap();
+    cs.set_high().unwrap();
+}
+
 
 #[entry]
 fn main() -> ! {
@@ -22,6 +32,7 @@ fn main() -> ! {
         &mut peripherals.OSCCTRL,
         &mut peripherals.NVMCTRL,
     );
+    let mut delay = Delay::new(core.SYST, &mut clocks);
 
     let mut pins = wio_terminal::Pins::new(peripherals.PORT);
     let gclk0 = &clocks.gclk0();
@@ -41,8 +52,55 @@ fn main() -> ! {
             pins.spi_sck.into_pad(&mut pins.port),
         ),
     );
+    let mut cs = pins.spi_cs.into_push_pull_output(&mut pins.port);
+    cs.set_high().unwrap();
+
+    // しばらく何もしない(NOP)
+    l6470_send(&mut spi, 0x00, &mut cs);
+    l6470_send(&mut spi, 0x00, &mut cs);
+    l6470_send(&mut spi, 0x00, &mut cs);
+    l6470_send(&mut spi, 0x00, &mut cs);
+    // HOMEポジションへ
+    l6470_send(&mut spi, 0xC0, &mut cs);
+
+    // 最大回転速度設定
+    l6470_send(&mut spi, 0x07, &mut cs);
+    l6470_send(&mut spi, 0x20, &mut cs);
+
+    // モータ停止中の電圧
+    l6470_send(&mut spi, 0x09, &mut cs);
+    l6470_send(&mut spi, 0xFF, &mut cs);
+
+    // モータ定速回転中の電圧
+    l6470_send(&mut spi, 0x0A, &mut cs);
+    l6470_send(&mut spi, 0xFF, &mut cs);
+
+    // モータ加速中の電圧
+    l6470_send(&mut spi, 0x0B, &mut cs);
+    l6470_send(&mut spi, 0xFF, &mut cs);
+
+    // モータ減速中の電圧
+    l6470_send(&mut spi, 0x0C, &mut cs);
+    l6470_send(&mut spi, 0xFF, &mut cs);
+
+    // ステップモード
+    l6470_send(&mut spi, 0x16, &mut cs);
+    l6470_send(&mut spi, 0x00, &mut cs);
 
     loop {
+        // 目標速度で正転させる
+        l6470_send(&mut spi, 0x50, &mut cs);
+        // NOP
+        l6470_send(&mut spi, 0x00, &mut cs);
+        // 回転速度を設定
+        l6470_send(&mut spi, 0x20, &mut cs);
+        // NOP
+        l6470_send(&mut spi, 0x00, &mut cs);
 
+        // しばらく回転
+        delay.delay_ms(1604u16);
+        l6470_send(&mut spi, 0xB8, &mut cs);
+        // 1秒停止
+        delay.delay_ms(1000u16);
     }
 }
