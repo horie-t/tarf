@@ -2,6 +2,9 @@
 
 ## ブレッドボードとの接続
 
+![Breadboad](./images/stepper_motor_breadboard.png)
+
+
 Wio Teraminlのピンは、説明書参照。
 
 | ピンNo. | 説明     | ASTAMD51P19A パッド |
