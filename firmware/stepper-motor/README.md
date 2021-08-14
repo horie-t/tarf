@@ -18,4 +18,4 @@ Wio Teraminlのピンは、説明書参照。
 
 * [L6470使用　ステッピングモータードライブキットの取扱説明書](https://akizukidenshi.com/download/ds/akizuki/AE-L6470_20190118.pdf)
 * [L6470データシート](https://akizukidenshi.com/download/ds/st/L6470.pdf)
-* [Aruduinoでのステッピングモータの接続](https://github.com/laurb9/StepperDriver)
+* [ステッピングモーターで2輪走行ロボットを作成（後編）](https://deviceplus.jp/hobby/entry039/)
