@@ -31,7 +31,7 @@ fn main() -> ! {
         Sercom5Pad1<Pb3<PfD>>,
     > = SPIMaster5::new(
         &clocks.sercom5_core(&gclk0).unwrap(),
-        8.mhz(),
+        4.mhz(),
         spi::MODE_3,
         peripherals.SERCOM5,
         &mut peripherals.MCLK,
