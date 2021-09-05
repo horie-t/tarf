@@ -43,6 +43,8 @@ impl<I: v2::PinId> Led<I> {
     }
 }
 
+static mut LED_INTERNAL: Option<Led<v2::PA15>> = None;
+
 #[entry]
 fn main() -> ! {
     let mut peripherals = Peripherals::take().unwrap();
@@ -60,8 +62,11 @@ fn main() -> ! {
     let mut pins = wio_terminal::Pins::new(peripherals.PORT);
     let mut led_external = Led::new(pins.i2c1_sda, &mut pins.port);
     led_external.set_low();
-    let mut led_internal = Led::new(pins.user_led, &mut pins.port);
-    led_internal.set_low();
+    unsafe {
+        LED_INTERNAL = Some(Led::new(pins.user_led, &mut pins.port));
+        let led_internal = LED_INTERNAL.as_mut().unwrap();
+        led_internal.set_high();
+    };
 
     let clk = clocks.gclk1();
     let mut configurable_eic = eic::init_with_ulp32k(&mut peripherals.MCLK, clocks.eic(&clk).unwrap(), peripherals.EIC);
@@ -77,5 +82,13 @@ fn main() -> ! {
         if ! led_external.is_set_high() {
             led_external.set_high();
         }
+    }
+}
+
+#[interrupt]
+fn EIC_EXTINT_9() {
+    unsafe {
+        let led_internal = LED_INTERNAL.as_mut().unwrap();
+        led_internal.set_high();
     }
 }
