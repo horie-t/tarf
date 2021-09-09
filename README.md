@@ -64,7 +64,7 @@ sudo udevadm control --reload-rules
 | 2nd      | ブレッドボードに接続して、[外部のLEDでLチカ](./firmware/l-chika-external)してみる。 | 
 | 3rd      | L6470モータドライバを使って、[ステッピングモータを駆動](./firmware/stepper-motor)させてみる。|
 | 4th      | L6470モータドライバを使って、[ステッピングモータをステップ数指定で駆動](./firmware/stepper-motor-count)させてみる。|
-
+| 5th      | 外部の[スイッチからの割込み](./firmware/interrupt-external)を受け付ける。           |
 
 ## 参考情報
 
