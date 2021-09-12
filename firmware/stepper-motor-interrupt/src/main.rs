@@ -7,7 +7,6 @@ use wio_terminal as wio;
 use wio::hal::clock::GenericClockController;
 use wio::hal::common::eic;
 use wio::hal::common::eic::pin::*;
-// use wio::hal::delay::Delay;
 use wio::hal::gpio::*;
 use wio::hal::hal::spi;
 use wio::hal::sercom::*;
@@ -33,49 +32,48 @@ impl L6470 {
     }
 }
 
-struct ButtonPins {
-    /// button pin
-    pub button: Pb8<Input<Floating>>,
+struct InterruptPins {
+    pub interrupt_pin: Pb8<Input<Floating>>,
 }
 
-impl ButtonPins {
+impl InterruptPins {
     pub fn init(
         self,
         eic: EIC,
         clocks: &mut GenericClockController,
         mclk: &mut MCLK,
         port: &mut Port,
-    ) -> ButtonController {
+    ) -> InterruptController {
         let clk = clocks.gclk1();
         let mut eic = eic::init_with_ulp32k(mclk, clocks.eic(&clk).unwrap(), eic);
-        eic.button_debounce_pins(&[self.button.id()]);
+        eic.button_debounce_pins(&[self.interrupt_pin.id()]);
 
-        let mut b = self.button.into_floating_ei(port);
-        b.sense(&mut eic, Sense::BOTH);
-        b.enable_interrupt(&mut eic);
-        ButtonController {
+        let mut interrupt_pin = self.interrupt_pin.into_floating_ei(port);
+        interrupt_pin.sense(&mut eic, Sense::BOTH);
+        interrupt_pin.enable_interrupt(&mut eic);
+        InterruptController {
             _eic: eic.finalize(),
-            b,
+            interrupt_pin,
         }
     }
 }
 
-pub struct ButtonController {
+pub struct InterruptController {
     _eic: eic::EIC,
-    b: ExtInt8<Pb8<Interrupt<Floating>>>,
+    interrupt_pin: ExtInt8<Pb8<Interrupt<Floating>>>,
 }
 
 macro_rules! isr {
-    ($Handler:ident, $($Event:expr, $Button:ident),+) => {
+    ($Handler:ident, $($Event:expr, $Pin:ident),+) => {
         pub fn $Handler(&mut self) -> Option<ButtonEvent> {
             $(
                 {
-                    let b = &mut self.$Button;
-                    if b.is_interrupt() {
-                        b.clear_interrupt();
+                    let pin = &mut self.$Pin;
+                    if pin.is_interrupt() {
+                        pin.clear_interrupt();
                         return Some(ButtonEvent {
                             button: $Event,
-                            down: !b.state(),
+                            down: !pin.state(),
                         })
                     }
                 }
@@ -86,7 +84,7 @@ macro_rules! isr {
     };
 }
 
-impl ButtonController {
+impl InterruptController {
     pub fn enable(&self, nvic: &mut NVIC) {
         unsafe {
             nvic.set_priority(interrupt::EIC_EXTINT_8, 1);
@@ -94,7 +92,7 @@ impl ButtonController {
         }
     }
 
-    isr!(interrupt_extint8, Button::TopLeft, b);
+    isr!(interrupt_extint8, Button::TopLeft, interrupt_pin);
 }
 
 static mut L6470_GLOBAL: Option<L6470> = None;
@@ -116,8 +114,8 @@ fn main() -> ! {
 
     let mut pins = Pins::new(peripherals.PORT);
 
-    let buttons = ButtonPins { button: pins.a0_d0 };
-    let button_ctrlr = buttons.init(
+    let interrupt_pins = InterruptPins { interrupt_pin: pins.a0_d0 };
+    let interrupt_pin_ctrlr = interrupt_pins.init(
         peripherals.EIC,
         &mut clocks,
         &mut peripherals.MCLK,
@@ -126,8 +124,8 @@ fn main() -> ! {
 
     let nvic = &mut core.NVIC;
     disable_interrupts(|_| unsafe {
-        button_ctrlr.enable(nvic);
-        BUTTON_CTRLR = Some(button_ctrlr);
+        interrupt_pin_ctrlr.enable(nvic);
+        INTERRUPT_CTRLR = Some(interrupt_pin_ctrlr);
     });
 
     let mut consumer = unsafe { Q.split().1 };
@@ -212,16 +210,16 @@ fn main() -> ! {
     }
 }
 
-static mut BUTTON_CTRLR: Option<ButtonController> = None;
+static mut INTERRUPT_CTRLR: Option<InterruptController> = None;
 static mut Q: Queue<ButtonEvent, 8> = Queue::new();
 
-macro_rules! button_interrupt {
+macro_rules! pin_interrupt {
     ($controller:ident, unsafe fn $func_name:ident ($cs:ident: $cstype:ty, $event:ident: ButtonEvent ) $code:block) => {
         unsafe fn $func_name($cs: $cstype, $event: ButtonEvent) {
             $code
         }
 
-        macro_rules! _button_interrupt_handler {
+        macro_rules! _pin_interrupt_handler {
             ($Interrupt:ident, $Handler:ident) => {
                 #[interrupt]
                 fn $Interrupt() {
@@ -236,12 +234,12 @@ macro_rules! button_interrupt {
             };
         }
 
-        _button_interrupt_handler!(EIC_EXTINT_8, interrupt_extint8);
+        _pin_interrupt_handler!(EIC_EXTINT_8, interrupt_extint8);
     };
 }
 
-button_interrupt!(
-    BUTTON_CTRLR,
+pin_interrupt!(
+    INTERRUPT_CTRLR,
     unsafe fn on_button_event(_cs: &CriticalSection, event: ButtonEvent) {
         let mut q = Q.split().0;
         q.enqueue(event).ok();
