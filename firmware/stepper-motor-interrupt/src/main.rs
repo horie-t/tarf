@@ -12,7 +12,7 @@ use wio::hal::hal::spi;
 use wio::hal::sercom::*;
 use wio::pac::{interrupt, CorePeripherals, Peripherals, EIC, MCLK};
 use wio::prelude::*;
-use wio::{entry, Button, ButtonEvent, Pins};
+use wio::{entry, Pins};
 
 use cortex_m::interrupt::{free as disable_interrupts, CriticalSection};
 use cortex_m::peripheral::NVIC;
@@ -30,6 +30,11 @@ impl L6470 {
         self.spi.write(&[b]).unwrap();
         self.cs.set_high().unwrap();
     }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct PinEvent {
+    pub state: bool,
 }
 
 struct InterruptPins {
@@ -64,16 +69,15 @@ pub struct InterruptController {
 }
 
 macro_rules! isr {
-    ($Handler:ident, $($Event:expr, $Pin:ident),+) => {
-        pub fn $Handler(&mut self) -> Option<ButtonEvent> {
+    ($Handler:ident, $($Pin:ident),+) => {
+        pub fn $Handler(&mut self) -> Option<PinEvent> {
             $(
                 {
                     let pin = &mut self.$Pin;
                     if pin.is_interrupt() {
                         pin.clear_interrupt();
-                        return Some(ButtonEvent {
-                            button: $Event,
-                            down: !pin.state(),
+                        return Some(PinEvent {
+                            state: pin.state(),
                         })
                     }
                 }
@@ -92,7 +96,7 @@ impl InterruptController {
         }
     }
 
-    isr!(interrupt_extint8, Button::TopLeft, interrupt_pin);
+    isr!(interrupt_extint8, interrupt_pin);
 }
 
 static mut L6470_GLOBAL: Option<L6470> = None;
@@ -194,8 +198,8 @@ fn main() -> ! {
     }
 
     loop {
-        if let Some(press) = consumer.dequeue() {
-            if !press.down {
+        if let Some(pin) = consumer.dequeue() {
+            if pin.state {
                 unsafe {
                     let l6470 = L6470_GLOBAL.as_mut().unwrap();
                     // Moveコマンドを正転で実行
@@ -211,11 +215,11 @@ fn main() -> ! {
 }
 
 static mut INTERRUPT_CTRLR: Option<InterruptController> = None;
-static mut Q: Queue<ButtonEvent, 8> = Queue::new();
+static mut Q: Queue<PinEvent, 8> = Queue::new();
 
 macro_rules! pin_interrupt {
     ($controller:ident, unsafe fn $func_name:ident ($cs:ident: $cstype:ty, $event:ident: ButtonEvent ) $code:block) => {
-        unsafe fn $func_name($cs: $cstype, $event: ButtonEvent) {
+        unsafe fn $func_name($cs: $cstype, $event: PinEvent) {
             $code
         }
 
