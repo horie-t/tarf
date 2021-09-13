@@ -1,0 +1,10 @@
+[package]
+authors = ["HORIE Tetsuya <horie-t@users.noreply.github.com>"]
+name = "l-chika"
+edition = "2018"
+version = "0.1.0"
+
+[dependencies]
+panic-halt = "0.2"
+wio_terminal = { git = "https://github.com/atsamd-rs/atsamd", package = "wio_terminal"}
+embedded-hal = "0.2.4"
