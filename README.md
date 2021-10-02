@@ -66,6 +66,7 @@ sudo udevadm control --reload-rules
 | 4        | L6470モータドライバを使って、[ステッピングモータをステップ数指定で駆動](./firmware/stepper-motor-count)させてみる。|
 | 5        | 外部の[スイッチからの割込み](./firmware/interrupt-external)を受け付ける。           |
 | 6        | [ステッピングモータの動作完了を割込みで処理する](./firmware/stepper-motor-interrupt)。 |
+| 7        | A4988モータドライバを使って、[ステッピングモータを駆動](./firmware/stepper-motor-a4988)させてみる。 |
 
 ## 参考情報
 
