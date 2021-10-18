@@ -1,3 +1,4 @@
 # 往復運動
 
-<video src="./images/PXL_20211018_035013116.mp4" width="480px"></video>
+https://user-images.githubusercontent.com/10256609/137706155-5c6c29f7-b0da-4c39-ac3d-75bc74e54c84.mp4
+
