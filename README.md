@@ -73,6 +73,7 @@ Firmware
 | 7        | A4988モータドライバを使って、[ステッピングモータを駆動](./firmware/stepper-motor-a4988)させてみる。 |
 | 8        | [3つのステッピングモータを駆動](./firmware/stepper-motor-a4988-3motor)させてみる。 |
 | 9        | TimerContorllerの割込みを使って[3つのステッピングモータを別々の回転数で駆動](./firmware/stepper-motor-a4988-interrupt)させてみる。 |
+| 10       | [試作1号機で往復運動](./firmware/reciprocating-motion)をさせてみる。 |
 
 Body
 
