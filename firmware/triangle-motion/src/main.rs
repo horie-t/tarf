@@ -21,8 +21,8 @@ struct Wheel<DIRPIN: PinId, STEPPIN: PinId, TC> {
     tc: TimerCounter<TC>
 }
 
-static mut WHEEL_0: Option<Wheel<PA07, PB04, TC2>> = None;
-static mut WHEEL_1: Option<Wheel<PB08, PB09, TC3>> = None;
+static mut WHEEL_0: Option<Wheel<PB08, PB09, TC2>> = None;
+static mut WHEEL_1: Option<Wheel<PA07, PB04, TC3>> = None;
 static mut WHEEL_2: Option<Wheel<PB05, PB06, TC4>> = None;
 
 #[entry]
@@ -45,22 +45,22 @@ fn main() -> ! {
     let mut pins = wio::Pins::new(peripherals.PORT);
 
     let mut wheel_0 = Wheel {
-        dir: pins.a2_d2.into_push_pull_output(&mut pins.port),
-        step: pins.a3_d3.into_push_pull_output(&mut pins.port),
+        dir: pins.a0_d0.into_push_pull_output(&mut pins.port),
+        step: pins.a1_d1.into_push_pull_output(&mut pins.port),
         tc: TimerCounter::tc2_(&timer_clock, peripherals.TC2, &mut peripherals.MCLK)
     };
-    wheel_0.tc.start(1.ms());
+    wheel_0.tc.start(10.ms());
     wheel_0.tc.enable_interrupt();
     wheel_0.dir.set_high().unwrap();
 
     let mut wheel_1 = Wheel {
-        dir: pins.a0_d0.into_push_pull_output(&mut pins.port),
-        step: pins.a1_d1.into_push_pull_output(&mut pins.port),
+        dir: pins.a2_d2.into_push_pull_output(&mut pins.port),
+        step: pins.a3_d3.into_push_pull_output(&mut pins.port),
         tc: TimerCounter::tc3_(&timer_clock, peripherals.TC3, &mut peripherals.MCLK)
     };
     wheel_1.tc.start(10.ms());
     wheel_1.tc.enable_interrupt();
-    wheel_1.dir.set_low().unwrap();
+    wheel_1.dir.set_high().unwrap();
 
     let mut wheel_2 = Wheel {
         dir: pins.a4_d4.into_push_pull_output(&mut pins.port),
@@ -84,7 +84,7 @@ fn main() -> ! {
     }
 }
 
-static mut CTX0_COUNT: i32  = 0;
+static mut WHEEL_0_COUNT: i32  = 0;
 
 #[interrupt]
 fn TC2() {
@@ -93,15 +93,15 @@ fn TC2() {
         ctx.tc.wait().unwrap();
         ctx.step.toggle();
 
-        CTX0_COUNT = CTX0_COUNT + 1;
-        if CTX0_COUNT == 400 {
+        WHEEL_0_COUNT = WHEEL_0_COUNT + 1;
+        if WHEEL_0_COUNT == 400 {
             ctx.dir.toggle();
-            CTX0_COUNT = 0;
+            WHEEL_0_COUNT = 0;
         }
     }
 }
 
-static mut CTX1_COUNT: i32  = 0;
+static mut WHEEL_1_COUNT: i32  = 0;
 
 #[interrupt]
 fn TC3() {
@@ -110,15 +110,15 @@ fn TC3() {
         ctx.tc.wait().unwrap();
         ctx.step.toggle();
 
-        CTX1_COUNT = CTX1_COUNT + 1;
-        if CTX1_COUNT == 400 {
+        WHEEL_1_COUNT = WHEEL_1_COUNT + 1;
+        if WHEEL_1_COUNT == 400 {
             ctx.dir.toggle();
-            CTX1_COUNT = 0;
+            WHEEL_1_COUNT = 0;
         }
     }
 }
 
-static mut CTX2_COUNT: i32  = 0;
+static mut WHEEL_2_COUNT: i32  = 0;
 
 #[interrupt]
 fn TC4() {
@@ -127,10 +127,10 @@ fn TC4() {
         ctx.tc.wait().unwrap();
         ctx.step.toggle();
 
-        CTX2_COUNT = CTX2_COUNT + 1;
-        if CTX2_COUNT == 400 {
+        WHEEL_2_COUNT = WHEEL_2_COUNT + 1;
+        if WHEEL_2_COUNT == 400 {
             ctx.dir.toggle();
-            CTX2_COUNT = 0;
+            WHEEL_2_COUNT = 0;
         }
     }
 }
