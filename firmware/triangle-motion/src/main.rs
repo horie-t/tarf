@@ -21,6 +21,21 @@ struct Wheel<DIRPIN: PinId, STEPPIN: PinId, TC> {
     tc: TimerCounter<TC>
 }
 
+impl<DIRPIN: PinId, STEPPIN: PinId, TC> Wheel<DIRPIN, STEPPIN, TC> {
+    pub fn new(mut port: &mut v1::Port, dir: Pin<DIRPIN, Input<Floating>>, step: Pin<STEPPIN, Input<Floating>>, 
+        tc: TimerCounter<TC>, interrupt: interrupt) -> Wheel<DIRPIN, STEPPIN, TC> {
+            let wheel = Wheel {
+                dir: dir.into_push_pull_output(&mut port), 
+                step: step.into_push_pull_output(&mut port), 
+                tc
+            };
+            unsafe {
+                NVIC::unmask(interrupt);
+            }
+            wheel
+        }
+}
+
 static mut WHEEL_0: Option<Wheel<PB08, PB09, TC2>> = None;
 static mut WHEEL_1: Option<Wheel<PA07, PB04, TC3>> = None;
 static mut WHEEL_2: Option<Wheel<PB05, PB06, TC4>> = None;
@@ -44,37 +59,25 @@ fn main() -> ! {
 
     let mut pins = wio::Pins::new(peripherals.PORT);
 
-    let mut wheel_0 = Wheel {
-        dir: pins.a0_d0.into_push_pull_output(&mut pins.port),
-        step: pins.a1_d1.into_push_pull_output(&mut pins.port),
-        tc: TimerCounter::tc2_(&timer_clock, peripherals.TC2, &mut peripherals.MCLK)
-    };
+    let mut wheel_0 = Wheel::new(&mut pins.port, pins.a0_d0, pins.a1_d1, 
+        TimerCounter::tc2_(&timer_clock, peripherals.TC2, &mut peripherals.MCLK), interrupt::TC2);
     wheel_0.tc.start(10.ms());
     wheel_0.tc.enable_interrupt();
     wheel_0.dir.set_high().unwrap();
 
-    let mut wheel_1 = Wheel {
-        dir: pins.a2_d2.into_push_pull_output(&mut pins.port),
-        step: pins.a3_d3.into_push_pull_output(&mut pins.port),
-        tc: TimerCounter::tc3_(&timer_clock, peripherals.TC3, &mut peripherals.MCLK)
-    };
+    let mut wheel_1 = Wheel::new(&mut pins.port, pins.a2_d2, pins.a3_d3,
+        TimerCounter::tc3_(&timer_clock, peripherals.TC3, &mut peripherals.MCLK), interrupt::TC3);
     wheel_1.tc.start(10.ms());
     wheel_1.tc.enable_interrupt();
     wheel_1.dir.set_high().unwrap();
 
-    let mut wheel_2 = Wheel {
-        dir: pins.a4_d4.into_push_pull_output(&mut pins.port),
-        step: pins.a5_d5.into_push_pull_output(&mut pins.port),
-        tc: TimerCounter::tc4_(&timer_clock1, peripherals.TC4, &mut peripherals.MCLK)
-    };
+    let mut wheel_2 = Wheel::new(&mut pins.port, pins.a4_d4, pins.a5_d5,
+        TimerCounter::tc4_(&timer_clock1, peripherals.TC4, &mut peripherals.MCLK), interrupt::TC4);
     wheel_2.tc.start(10.ms());
     wheel_2.tc.enable_interrupt();
     wheel_2.dir.set_high().unwrap();
 
     unsafe {
-        NVIC::unmask(interrupt::TC2);
-        NVIC::unmask(interrupt::TC3);
-        NVIC::unmask(interrupt::TC4);
         WHEEL_0 = Some(wheel_0);
         WHEEL_1 = Some(wheel_1);
         WHEEL_2 = Some(wheel_2);
@@ -87,26 +90,26 @@ fn main() -> ! {
 #[interrupt]
 fn TC2() {
     unsafe {
-        let ctx = WHEEL_0.as_mut().unwrap();
-        ctx.tc.wait().unwrap();
-        ctx.step.toggle();
+        let wheel = WHEEL_0.as_mut().unwrap();
+        wheel.tc.wait().unwrap();
+        wheel.step.toggle();
     }
 }
 
 #[interrupt]
 fn TC3() {
     unsafe {
-        let ctx = WHEEL_1.as_mut().unwrap();
-        ctx.tc.wait().unwrap();
-        ctx.step.toggle();
+        let wheel = WHEEL_1.as_mut().unwrap();
+        wheel.tc.wait().unwrap();
+        wheel.step.toggle();
     }
 }
 
 #[interrupt]
 fn TC4() {
     unsafe {
-        let ctx = WHEEL_2.as_mut().unwrap();
-        ctx.tc.wait().unwrap();
-        ctx.step.toggle();
+        let wheel = WHEEL_2.as_mut().unwrap();
+        wheel.tc.wait().unwrap();
+        wheel.step.toggle();
     }
 }
