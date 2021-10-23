@@ -84,24 +84,14 @@ fn main() -> ! {
     }
 }
 
-static mut WHEEL_0_COUNT: i32  = 0;
-
 #[interrupt]
 fn TC2() {
     unsafe {
         let ctx = WHEEL_0.as_mut().unwrap();
         ctx.tc.wait().unwrap();
         ctx.step.toggle();
-
-        WHEEL_0_COUNT = WHEEL_0_COUNT + 1;
-        if WHEEL_0_COUNT == 400 {
-            ctx.dir.toggle();
-            WHEEL_0_COUNT = 0;
-        }
     }
 }
-
-static mut WHEEL_1_COUNT: i32  = 0;
 
 #[interrupt]
 fn TC3() {
@@ -109,16 +99,8 @@ fn TC3() {
         let ctx = WHEEL_1.as_mut().unwrap();
         ctx.tc.wait().unwrap();
         ctx.step.toggle();
-
-        WHEEL_1_COUNT = WHEEL_1_COUNT + 1;
-        if WHEEL_1_COUNT == 400 {
-            ctx.dir.toggle();
-            WHEEL_1_COUNT = 0;
-        }
     }
 }
-
-static mut WHEEL_2_COUNT: i32  = 0;
 
 #[interrupt]
 fn TC4() {
@@ -126,11 +108,5 @@ fn TC4() {
         let ctx = WHEEL_2.as_mut().unwrap();
         ctx.tc.wait().unwrap();
         ctx.step.toggle();
-
-        WHEEL_2_COUNT = WHEEL_2_COUNT + 1;
-        if WHEEL_2_COUNT == 400 {
-            ctx.dir.toggle();
-            WHEEL_2_COUNT = 0;
-        }
     }
 }
