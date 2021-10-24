@@ -16,6 +16,19 @@ use wio::hal::timer::{Count16, TimerCounter};
 use wio::pac::{interrupt, Peripherals, TC3, TC2, TC4};
 use wio::prelude::*;
 
+macro_rules! wheel_interrupt {
+    ($Handler:ident, $Wheel:ident) => {
+        #[interrupt]
+        fn $Handler() {
+            unsafe {
+                let wheel = $Wheel.as_mut().unwrap();
+                wheel.tc.wait().unwrap();
+                wheel.step.toggle();
+            }
+        }
+    };
+}
+
 struct Wheel<DIRPIN: PinId, STEPPIN: PinId, TC: Count16> {
     dir: Pin<DIRPIN, Output<PushPull>>,
     step: Pin<STEPPIN, Output<PushPull>>,
@@ -82,35 +95,11 @@ fn main() -> ! {
         WHEEL_0 = Some(wheel_0);
         WHEEL_1 = Some(wheel_1);
         WHEEL_2 = Some(wheel_2);
+        wheel_interrupt!(TC2, WHEEL_0);
+        wheel_interrupt!(TC3, WHEEL_1);
+        wheel_interrupt!(TC4, WHEEL_2);
     }
 
     loop {
-    }
-}
-
-#[interrupt]
-fn TC2() {
-    unsafe {
-        let wheel = WHEEL_0.as_mut().unwrap();
-        wheel.tc.wait().unwrap();
-        wheel.step.toggle();
-    }
-}
-
-#[interrupt]
-fn TC3() {
-    unsafe {
-        let wheel = WHEEL_1.as_mut().unwrap();
-        wheel.tc.wait().unwrap();
-        wheel.step.toggle();
-    }
-}
-
-#[interrupt]
-fn TC4() {
-    unsafe {
-        let wheel = WHEEL_2.as_mut().unwrap();
-        wheel.tc.wait().unwrap();
-        wheel.step.toggle();
     }
 }
