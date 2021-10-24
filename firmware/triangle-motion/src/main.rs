@@ -16,6 +16,12 @@ use wio::hal::timer::{Count16, TimerCounter};
 use wio::pac::{interrupt, Peripherals, TC3, TC2, TC4};
 use wio::prelude::*;
 
+enum Wheel {
+    Front,
+    Right,
+    Left
+}
+
 macro_rules! wheel_interrupt {
     ($Handler:ident, $WheelController:ident) => {
         #[interrupt]
@@ -30,15 +36,17 @@ macro_rules! wheel_interrupt {
 }
 
 struct WheelController<DIRPIN: PinId, STEPPIN: PinId, TC: Count16> {
+    id: Wheel,
     dir: Pin<DIRPIN, Output<PushPull>>,
     step: Pin<STEPPIN, Output<PushPull>>,
     tc: TimerCounter<TC>
 }
 
 impl<DIRPIN: PinId, STEPPIN: PinId, TC: Count16> WheelController<DIRPIN, STEPPIN, TC> {
-    pub fn new(mut port: &mut v1::Port, dir: Pin<DIRPIN, Input<Floating>>, step: Pin<STEPPIN, Input<Floating>>, 
+    pub fn new(id: Wheel, mut port: &mut v1::Port, dir: Pin<DIRPIN, Input<Floating>>, step: Pin<STEPPIN, Input<Floating>>, 
         tc: TimerCounter<TC>, interrupt: interrupt) -> WheelController<DIRPIN, STEPPIN, TC> {
             let mut wheel = WheelController {
+                id,
                 dir: dir.into_push_pull_output(&mut port), 
                 step: step.into_push_pull_output(&mut port), 
                 tc
@@ -60,6 +68,8 @@ static mut WHEEL_FRONT: Option<WheelController<PB08, PB09, TC2>> = None;
 static mut WHEEL_RIGHT: Option<WheelController<PA07, PB04, TC3>> = None;
 static mut WHEEL_LEFT: Option<WheelController<PB05, PB06, TC4>> = None;
 
+// static mut WHEEL_EVENT_Q: Queue<WheelEvent, 8> = Queue::new();
+
 #[entry]
 fn main() -> ! {
     // 初期化処理
@@ -79,15 +89,15 @@ fn main() -> ! {
 
     let mut pins = wio::Pins::new(peripherals.PORT);
 
-    let mut wheel_front = WheelController::new(&mut pins.port, pins.a0_d0, pins.a1_d1, 
+    let mut wheel_front = WheelController::new(Wheel::Front, &mut pins.port, pins.a0_d0, pins.a1_d1, 
         TimerCounter::tc2_(&timer_clock, peripherals.TC2, &mut peripherals.MCLK), interrupt::TC2);
     wheel_front.start(10.ms());
 
-    let mut wheel_right = WheelController::new(&mut pins.port, pins.a2_d2, pins.a3_d3,
+    let mut wheel_right = WheelController::new(Wheel::Right, &mut pins.port, pins.a2_d2, pins.a3_d3,
         TimerCounter::tc3_(&timer_clock, peripherals.TC3, &mut peripherals.MCLK), interrupt::TC3);
     wheel_right.start(10.ms());
 
-    let mut wheel_left = WheelController::new(&mut pins.port, pins.a4_d4, pins.a5_d5,
+    let mut wheel_left = WheelController::new(Wheel::Left, &mut pins.port, pins.a4_d4, pins.a5_d5,
         TimerCounter::tc4_(&timer_clock1, peripherals.TC4, &mut peripherals.MCLK), interrupt::TC4);
     wheel_left.start(10.ms());
 
