@@ -5,35 +5,42 @@ use panic_halt as _;
 
 use cortex_m::peripheral::NVIC;
 
+use wio::hal::time::Milliseconds;
 use wio_terminal as wio;
 
 use wio::entry;
 use wio::hal::clock::GenericClockController;
 use wio::hal::gpio::*;
 use wio::hal::gpio::v2::{PA07, PB04, PB05, PB06, PB08, PB09, PinId};
-use wio::hal::timer::TimerCounter;
+use wio::hal::timer::{Count16, TimerCounter};
 use wio::pac::{interrupt, Peripherals, TC3, TC2, TC4};
 use wio::prelude::*;
 
-struct Wheel<DIRPIN: PinId, STEPPIN: PinId, TC> {
+struct Wheel<DIRPIN: PinId, STEPPIN: PinId, TC: Count16> {
     dir: Pin<DIRPIN, Output<PushPull>>,
     step: Pin<STEPPIN, Output<PushPull>>,
     tc: TimerCounter<TC>
 }
 
-impl<DIRPIN: PinId, STEPPIN: PinId, TC> Wheel<DIRPIN, STEPPIN, TC> {
+impl<DIRPIN: PinId, STEPPIN: PinId, TC: Count16> Wheel<DIRPIN, STEPPIN, TC> {
     pub fn new(mut port: &mut v1::Port, dir: Pin<DIRPIN, Input<Floating>>, step: Pin<STEPPIN, Input<Floating>>, 
         tc: TimerCounter<TC>, interrupt: interrupt) -> Wheel<DIRPIN, STEPPIN, TC> {
-            let wheel = Wheel {
+            let mut wheel = Wheel {
                 dir: dir.into_push_pull_output(&mut port), 
                 step: step.into_push_pull_output(&mut port), 
                 tc
             };
+            wheel.dir.set_high().unwrap();
             unsafe {
                 NVIC::unmask(interrupt);
             }
             wheel
         }
+
+    pub fn start(&mut self, timeout: Milliseconds) {
+        self.tc.start(timeout);
+        self.tc.enable_interrupt();
+    }
 }
 
 static mut WHEEL_0: Option<Wheel<PB08, PB09, TC2>> = None;
@@ -61,21 +68,15 @@ fn main() -> ! {
 
     let mut wheel_0 = Wheel::new(&mut pins.port, pins.a0_d0, pins.a1_d1, 
         TimerCounter::tc2_(&timer_clock, peripherals.TC2, &mut peripherals.MCLK), interrupt::TC2);
-    wheel_0.tc.start(10.ms());
-    wheel_0.tc.enable_interrupt();
-    wheel_0.dir.set_high().unwrap();
+    wheel_0.start(10.ms());
 
     let mut wheel_1 = Wheel::new(&mut pins.port, pins.a2_d2, pins.a3_d3,
         TimerCounter::tc3_(&timer_clock, peripherals.TC3, &mut peripherals.MCLK), interrupt::TC3);
-    wheel_1.tc.start(10.ms());
-    wheel_1.tc.enable_interrupt();
-    wheel_1.dir.set_high().unwrap();
+    wheel_1.start(10.ms());
 
     let mut wheel_2 = Wheel::new(&mut pins.port, pins.a4_d4, pins.a5_d5,
         TimerCounter::tc4_(&timer_clock1, peripherals.TC4, &mut peripherals.MCLK), interrupt::TC4);
-    wheel_2.tc.start(10.ms());
-    wheel_2.tc.enable_interrupt();
-    wheel_2.dir.set_high().unwrap();
+    wheel_2.start(10.ms());
 
     unsafe {
         WHEEL_0 = Some(wheel_0);
