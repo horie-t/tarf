@@ -4,6 +4,7 @@
 use heapless::consts::U16;
 use panic_halt as _;
 
+use cortex_m::interrupt::{free as disable_interrupts};
 use cortex_m::peripheral::NVIC;
 
 use wio::hal::time::Milliseconds;
@@ -34,13 +35,13 @@ macro_rules! wheel_interrupt {
     ($Handler:ident, $WheelController:ident) => {
         #[interrupt]
         fn $Handler() {
-            unsafe {
+            disable_interrupts(|_cs| unsafe {
                 let wheel = $WheelController.as_mut().unwrap();
                 wheel.tc.wait().unwrap();
                 wheel.step_pin.toggle().unwrap();
                 let mut queue = WHEEL_EVENT_Q.split().0;
                 queue.enqueue(WheelEvent{ id: wheel.id, dir: wheel.dir}).ok();
-            }
+            });
         }
     };
 }
