@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 
+use heapless::consts::U16;
 use panic_halt as _;
 
 use cortex_m::peripheral::NVIC;
@@ -15,10 +16,18 @@ use wio::hal::timer::{Count16, TimerCounter};
 use wio::pac::{interrupt, Peripherals, TC3, TC2, TC4};
 use wio::prelude::*;
 
+use heapless::spsc::Queue;
+
+#[derive(Clone, Copy)]
 enum Wheel {
     Front,
     Right,
     Left
+}
+
+struct WheelEvent {
+    id: Wheel,
+    dir: bool
 }
 
 macro_rules! wheel_interrupt {
@@ -28,7 +37,9 @@ macro_rules! wheel_interrupt {
             unsafe {
                 let wheel = $WheelController.as_mut().unwrap();
                 wheel.tc.wait().unwrap();
-                wheel.step.toggle().unwrap();
+                wheel.step_pin.toggle().unwrap();
+                let mut queue = WHEEL_EVENT_Q.split().0;
+                queue.enqueue(WheelEvent{ id: wheel.id, dir: wheel.dir}).ok();
             }
         }
     };
@@ -36,16 +47,17 @@ macro_rules! wheel_interrupt {
 
 struct WheelController<DIRPIN: PinId, STEPPIN: PinId, TC: Count16> {
     id: Wheel,
-    dir: Pin<DIRPIN, PushPullOutput>,
-    step: Pin<STEPPIN, PushPullOutput>,
+    dir: bool,
+    dir_pin: Pin<DIRPIN, PushPullOutput>,
+    step_pin: Pin<STEPPIN, PushPullOutput>,
     tc: TimerCounter<TC>
 }
 
 impl<DIRPIN: PinId, STEPPIN: PinId, TC: Count16> WheelController<DIRPIN, STEPPIN, TC> {
     pub fn new(id: Wheel, dir: Pin<DIRPIN, PushPullOutput>, step: Pin<STEPPIN, PushPullOutput>,
         tc: TimerCounter<TC>, interrupt: interrupt) -> WheelController<DIRPIN, STEPPIN, TC> {
-            let mut wheel = WheelController { id, dir, step, tc };
-            wheel.dir.set_high().unwrap();
+            let mut wheel = WheelController { id, dir: true, dir_pin: dir, step_pin: step, tc };
+            wheel.dir_pin.set_high().unwrap();
             unsafe {
                 NVIC::unmask(interrupt);
             }
@@ -62,7 +74,7 @@ static mut WHEEL_FRONT: Option<WheelController<PB08, PB09, TC2>> = None;
 static mut WHEEL_RIGHT: Option<WheelController<PA07, PB04, TC3>> = None;
 static mut WHEEL_LEFT: Option<WheelController<PB05, PB06, TC4>> = None;
 
-// static mut WHEEL_EVENT_Q: Queue<WheelEvent, 8> = Queue::new();
+static mut WHEEL_EVENT_Q: Queue<WheelEvent, U16> = Queue(heapless::i::Queue::new());
 
 #[entry]
 fn main() -> ! {
@@ -102,8 +114,47 @@ fn main() -> ! {
         wheel_interrupt!(TC2, WHEEL_FRONT);
         wheel_interrupt!(TC3, WHEEL_RIGHT);
         wheel_interrupt!(TC4, WHEEL_LEFT);
+
+        WHEEL_EVENT_Q.split();
     }
 
+    let mut consumer = unsafe { WHEEL_EVENT_Q.split().1 };
+
+    let mut wheel_front_count = 0;
+    let mut wheel_right_count = 0;
+    let mut wheel_left_count = 0;
+
     loop {
+        if let Some(event) = consumer.dequeue() {
+            match event.id {
+                Wheel::Front => {
+                    wheel_front_count = wheel_front_count + 1;
+                    if wheel_front_count == 400 {
+                        wheel_front_count = 0;
+                        unsafe {
+                            WHEEL_FRONT.as_mut().unwrap().dir_pin.toggle().unwrap();
+                        }
+                    }
+                },
+                Wheel::Right => {
+                    wheel_right_count = wheel_right_count + 1;
+                    if wheel_right_count == 400 {
+                        wheel_right_count = 0;
+                        unsafe {
+                            WHEEL_RIGHT.as_mut().unwrap().dir_pin.toggle().unwrap();
+                        }
+                    }
+                },
+                Wheel::Left => {
+                    wheel_left_count = wheel_left_count + 1;
+                    if wheel_left_count == 400 {
+                        wheel_left_count = 0;
+                        unsafe {
+                            WHEEL_LEFT.as_mut().unwrap().dir_pin.toggle().unwrap();
+                        }
+                    }
+                },
+            }
+        }
     }
 }
