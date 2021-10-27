@@ -39,6 +39,11 @@ macro_rules! wheel_interrupt {
                 let wheel = $WheelController.as_mut().unwrap();
                 wheel.tc.wait().unwrap();
                 wheel.step_pin.toggle().unwrap();
+                let mut command_queue = wheel.command_queue.split().1;
+                if let Some(_command) = command_queue.dequeue() {
+                    wheel.toggle();
+                }
+
                 let mut queue = WHEEL_EVENT_Q.split().0;
                 queue.enqueue(WheelEvent{ id: wheel.id, dir: wheel.dir}).ok();
             });
@@ -46,34 +51,53 @@ macro_rules! wheel_interrupt {
     };
 }
 
-struct WheelController<DIRPIN: PinId, STEPPIN: PinId, TC: Count16> {
+struct WheelAssembly<DIRPIN: PinId, STEPPIN: PinId, TC: Count16> {
     id: Wheel,
     dir: bool,
     dir_pin: Pin<DIRPIN, PushPullOutput>,
     step_pin: Pin<STEPPIN, PushPullOutput>,
-    tc: TimerCounter<TC>
+    tc: TimerCounter<TC>,
+    command_queue: Queue<WheelCommand, U16>
 }
 
-impl<DIRPIN: PinId, STEPPIN: PinId, TC: Count16> WheelController<DIRPIN, STEPPIN, TC> {
+impl<DIRPIN: PinId, STEPPIN: PinId, TC: Count16> WheelAssembly<DIRPIN, STEPPIN, TC> {
     pub fn new(id: Wheel, dir: Pin<DIRPIN, PushPullOutput>, step: Pin<STEPPIN, PushPullOutput>,
-        tc: TimerCounter<TC>, interrupt: interrupt) -> WheelController<DIRPIN, STEPPIN, TC> {
-            let mut wheel = WheelController { id, dir: true, dir_pin: dir, step_pin: step, tc };
+        tc: TimerCounter<TC>, interrupt: interrupt) -> WheelAssembly<DIRPIN, STEPPIN, TC> {
+            let mut wheel = WheelAssembly { id, dir: true, dir_pin: dir, step_pin: step, tc, command_queue: Queue(heapless::i::Queue::new())};
             wheel.dir_pin.set_high().unwrap();
             unsafe {
                 NVIC::unmask(interrupt);
             }
             wheel
         }
+}
 
-    pub fn start(&mut self, timeout: Milliseconds) {
+
+trait WheelController {
+    fn start(&mut self, timeout: Milliseconds);
+    fn toggle(&mut self);
+}
+
+
+
+impl<DIRPIN: PinId, STEPPIN: PinId, TC: Count16> WheelController for WheelAssembly<DIRPIN, STEPPIN, TC> {
+    fn start(&mut self, timeout: Milliseconds) {
         self.tc.start(timeout);
         self.tc.enable_interrupt();
     }
+
+    fn toggle(&mut self) {
+        self.dir_pin.toggle().unwrap();
+    }
 }
 
-static mut WHEEL_FRONT: Option<WheelController<PB08, PB09, TC2>> = None;
-static mut WHEEL_RIGHT: Option<WheelController<PA07, PB04, TC3>> = None;
-static mut WHEEL_LEFT: Option<WheelController<PB05, PB06, TC4>> = None;
+struct WheelCommand {
+    
+}
+
+static mut WHEEL_FRONT: Option<WheelAssembly<PB08, PB09, TC2>> = None;
+static mut WHEEL_RIGHT: Option<WheelAssembly<PA07, PB04, TC3>> = None;
+static mut WHEEL_LEFT: Option<WheelAssembly<PB05, PB06, TC4>> = None;
 
 static mut WHEEL_EVENT_Q: Queue<WheelEvent, U16> = Queue(heapless::i::Queue::new());
 
@@ -96,15 +120,15 @@ fn main() -> ! {
 
     let pins = Pins::new(peripherals.PORT);
 
-    let mut wheel_front = WheelController::new(Wheel::Front, pins.pb08.into_push_pull_output(), pins.pb09.into_push_pull_output(),
+    let mut wheel_front = WheelAssembly::new(Wheel::Front, pins.pb08.into_push_pull_output(), pins.pb09.into_push_pull_output(),
         TimerCounter::tc2_(&timer_clock, peripherals.TC2, &mut peripherals.MCLK), interrupt::TC2);
     wheel_front.start(10.ms());
 
-    let mut wheel_right = WheelController::new(Wheel::Right, pins.pa07.into_push_pull_output(), pins.pb04.into_push_pull_output(),
+    let mut wheel_right = WheelAssembly::new(Wheel::Right, pins.pa07.into_push_pull_output(), pins.pb04.into_push_pull_output(),
         TimerCounter::tc3_(&timer_clock, peripherals.TC3, &mut peripherals.MCLK), interrupt::TC3);
     wheel_right.start(10.ms());
 
-    let mut wheel_left = WheelController::new(Wheel::Left, pins.pb05.into_push_pull_output(), pins.pb06.into_push_pull_output(),
+    let mut wheel_left = WheelAssembly::new(Wheel::Left, pins.pb05.into_push_pull_output(), pins.pb06.into_push_pull_output(),
         TimerCounter::tc4_(&timer_clock1, peripherals.TC4, &mut peripherals.MCLK), interrupt::TC4);
     wheel_left.start(10.ms());
 
@@ -133,7 +157,9 @@ fn main() -> ! {
                     if wheel_front_count == 400 {
                         wheel_front_count = 0;
                         unsafe {
-                            WHEEL_FRONT.as_mut().unwrap().dir_pin.toggle().unwrap();
+                            let wheel = WHEEL_FRONT.as_mut().unwrap();
+                            let mut queue = wheel.command_queue.split().0;
+                            queue.enqueue(WheelCommand{}).ok();
                         }
                     }
                 },
@@ -142,7 +168,9 @@ fn main() -> ! {
                     if wheel_right_count == 400 {
                         wheel_right_count = 0;
                         unsafe {
-                            WHEEL_RIGHT.as_mut().unwrap().dir_pin.toggle().unwrap();
+                            let wheel = WHEEL_RIGHT.as_mut().unwrap();
+                            let mut queue = wheel.command_queue.split().0;
+                            queue.enqueue(WheelCommand{}).ok();
                         }
                     }
                 },
@@ -151,7 +179,9 @@ fn main() -> ! {
                     if wheel_left_count == 400 {
                         wheel_left_count = 0;
                         unsafe {
-                            WHEEL_LEFT.as_mut().unwrap().dir_pin.toggle().unwrap();
+                            let wheel = WHEEL_LEFT.as_mut().unwrap();
+                            let mut queue = wheel.command_queue.split().0;
+                            queue.enqueue(WheelCommand{}).ok();
                         }
                     }
                 },
