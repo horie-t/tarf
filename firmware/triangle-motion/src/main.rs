@@ -75,6 +75,8 @@ impl<DIRPIN: PinId, STEPPIN: PinId, TC: Count16> WheelAssembly<DIRPIN, STEPPIN, 
 
 trait WheelController {
     fn start(&mut self, timeout: Milliseconds);
+    fn stop(&mut self);
+    fn restart(&mut self);
     fn toggle(&mut self);
 }
 
@@ -84,6 +86,15 @@ impl<DIRPIN: PinId, STEPPIN: PinId, TC: Count16> WheelController for WheelAssemb
     fn start(&mut self, timeout: Milliseconds) {
         self.tc.start(timeout);
         self.tc.enable_interrupt();
+    }
+
+    fn stop(&mut self) {
+        self.tc.disable_interrupt();
+    }
+
+    fn restart(&mut self) {
+        self.tc.enable_interrupt();
+        self.tc.wait().unwrap();
     }
 
     fn toggle(&mut self) {
@@ -123,6 +134,8 @@ fn main() -> ! {
     let mut wheel_front = WheelAssembly::new(Wheel::Front, pins.pb08.into_push_pull_output(), pins.pb09.into_push_pull_output(),
         TimerCounter::tc2_(&timer_clock, peripherals.TC2, &mut peripherals.MCLK), interrupt::TC2);
     wheel_front.start(10.ms());
+    wheel_front.toggle();
+    wheel_front.stop();
 
     let mut wheel_right = WheelAssembly::new(Wheel::Right, pins.pa07.into_push_pull_output(), pins.pb04.into_push_pull_output(),
         TimerCounter::tc3_(&timer_clock, peripherals.TC3, &mut peripherals.MCLK), interrupt::TC3);
@@ -131,6 +144,7 @@ fn main() -> ! {
     let mut wheel_left = WheelAssembly::new(Wheel::Left, pins.pb05.into_push_pull_output(), pins.pb06.into_push_pull_output(),
         TimerCounter::tc4_(&timer_clock1, peripherals.TC4, &mut peripherals.MCLK), interrupt::TC4);
     wheel_left.start(10.ms());
+    wheel_left.toggle();
 
     unsafe {
         WHEEL_FRONT = Some(wheel_front);
@@ -149,6 +163,12 @@ fn main() -> ! {
     let mut wheel_right_count = 0;
     let mut wheel_left_count = 0;
 
+    let mut wheel_front_moved = false;
+    let mut wheel_right_moved = false;
+    let mut wheel_left_moved = false;
+
+    let mut vehicle_dir = 0;
+
     loop {
         if let Some(event) = consumer.dequeue() {
             match event.id {
@@ -156,10 +176,32 @@ fn main() -> ! {
                     wheel_front_count = wheel_front_count + 1;
                     if wheel_front_count == 400 {
                         wheel_front_count = 0;
+                        wheel_front_moved = true;
                         unsafe {
                             let wheel = WHEEL_FRONT.as_mut().unwrap();
-                            let mut queue = wheel.command_queue.split().0;
-                            queue.enqueue(WheelCommand{}).ok();
+                            if vehicle_dir == 0 {
+                            } else if vehicle_dir == 1 {
+                                wheel.toggle();
+                                // let mut queue = wheel.command_queue.split().0;
+                                // queue.enqueue(WheelCommand{}).ok();
+                                if wheel_left_moved {
+                                    vehicle_dir = 2;
+                                    wheel_front_moved = false;
+                                    wheel_left_moved = false;
+                                }
+                            } else if vehicle_dir == 2 {
+                                wheel.stop();
+                                let wheel_next = WHEEL_LEFT.as_mut().unwrap();
+                                wheel_next.restart();
+                                wheel_next.toggle();
+                                // let mut queue = wheel_next.command_queue.split().0;
+                                // queue.enqueue(WheelCommand{}).ok();
+                                if wheel_right_moved {
+                                    vehicle_dir = 0;
+                                    wheel_front_moved = false;
+                                    wheel_right_moved = false;
+                                }
+                            }
                         }
                     }
                 },
@@ -167,10 +209,32 @@ fn main() -> ! {
                     wheel_right_count = wheel_right_count + 1;
                     if wheel_right_count == 400 {
                         wheel_right_count = 0;
+                        wheel_right_moved = true;
                         unsafe {
                             let wheel = WHEEL_RIGHT.as_mut().unwrap();
-                            let mut queue = wheel.command_queue.split().0;
-                            queue.enqueue(WheelCommand{}).ok();
+                            if vehicle_dir == 0 {
+                                wheel.stop();
+                                let wheel_next = WHEEL_FRONT.as_mut().unwrap();
+                                wheel_next.restart();
+                                wheel_next.toggle();
+                                // let mut queue = wheel_next.command_queue.split().0;
+                                // queue.enqueue(WheelCommand{}).ok();
+                                if wheel_left_moved {
+                                    vehicle_dir = 1;
+                                    wheel_right_moved = false;
+                                    wheel_left_moved = false;
+                                }
+                            } else if vehicle_dir == 1 {
+                            } else if vehicle_dir == 2 {
+                                wheel.toggle();
+                                if wheel_front_moved {
+                                    vehicle_dir = 0;
+                                    wheel_right_moved = false;
+                                    wheel_front_moved = false;
+                                }
+                                // let mut queue = wheel.command_queue.split().0;
+                                // queue.enqueue(WheelCommand{}).ok();
+                            }
                         }
                     }
                 },
@@ -178,10 +242,32 @@ fn main() -> ! {
                     wheel_left_count = wheel_left_count + 1;
                     if wheel_left_count == 400 {
                         wheel_left_count = 0;
+                        wheel_left_moved = true;
                         unsafe {
                             let wheel = WHEEL_LEFT.as_mut().unwrap();
-                            let mut queue = wheel.command_queue.split().0;
-                            queue.enqueue(WheelCommand{}).ok();
+                            if vehicle_dir == 0 {
+                                wheel.toggle();
+                                // let mut queue = wheel.command_queue.split().0;
+                                // queue.enqueue(WheelCommand{}).ok();
+                                if wheel_right_moved {
+                                    vehicle_dir = 1;
+                                    wheel_left_moved = false;
+                                    wheel_right_moved = false;
+                                }
+                            } else if vehicle_dir == 1 {
+                                wheel.stop();
+                                let wheel_next = WHEEL_RIGHT.as_mut().unwrap();
+                                wheel_next.restart();
+                                wheel_next.toggle();
+                                // let mut queue = wheel_next.command_queue.split().0;
+                                // queue.enqueue(WheelCommand{}).ok();
+                                if wheel_front_moved {
+                                    vehicle_dir = 2;
+                                    wheel_left_moved = false;
+                                    wheel_front_moved = false;
+                                }
+                            } else if vehicle_dir == 2 {
+                            }
                         }
                     }
                 },
