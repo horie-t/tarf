@@ -10,9 +10,10 @@ use cortex_m::peripheral::NVIC;
 use wio::hal::time::Milliseconds;
 use wio_terminal as wio;
 
-use wio::entry;
+use wio::{entry, Sets, Pins};
 use wio::hal::clock::GenericClockController;
-use wio::hal::gpio::v2::*;
+use wio::hal::gpio::v1::*;
+use wio::hal::gpio::v2::{PA07, PB04, PB05, PB06, PB08, PB09};
 use wio::hal::timer::{Count16, TimerCounter};
 use wio::pac::{interrupt, Peripherals, TC3, TC2, TC4};
 use wio::prelude::*;
@@ -36,16 +37,22 @@ macro_rules! wheel_interrupt {
         #[interrupt]
         fn $Handler() {
             disable_interrupts(|_cs| unsafe {
-                let wheel = $WheelController.as_mut().unwrap();
+                let mut wheel = $WheelController.as_mut().unwrap();
                 wheel.tc.wait().unwrap();
-                wheel.step_pin.toggle().unwrap();
+                if wheel.is_step_pin_high {
+                    wheel.is_step_pin_high = false;
+                    wheel.step_pin.set_low().unwrap();
+                } else {
+                    wheel.is_step_pin_high = true;
+                    wheel.step_pin.set_high().unwrap();
+                }
                 let mut command_queue = wheel.command_queue.split().1;
                 if let Some(_command) = command_queue.dequeue() {
                     wheel.toggle();
                 }
 
                 let mut queue = WHEEL_EVENT_Q.split().0;
-                queue.enqueue(WheelEvent{ id: wheel.id, dir: wheel.dir}).ok();
+                queue.enqueue(WheelEvent{ id: wheel.id, dir: wheel.is_dir_pin_high}).ok();
             });
         }
     };
@@ -53,17 +60,21 @@ macro_rules! wheel_interrupt {
 
 struct WheelAssembly<DIRPIN: PinId, STEPPIN: PinId, TC: Count16> {
     id: Wheel,
-    dir: bool,
-    dir_pin: Pin<DIRPIN, PushPullOutput>,
-    step_pin: Pin<STEPPIN, PushPullOutput>,
+    dir_pin: Pin<DIRPIN, Output<PushPull>>,
+    is_dir_pin_high: bool,
+    step_pin: Pin<STEPPIN, Output<PushPull>>,
+    is_step_pin_high: bool,
     tc: TimerCounter<TC>,
     command_queue: Queue<WheelCommand, U16>
 }
 
 impl<DIRPIN: PinId, STEPPIN: PinId, TC: Count16> WheelAssembly<DIRPIN, STEPPIN, TC> {
-    pub fn new(id: Wheel, dir: Pin<DIRPIN, PushPullOutput>, step: Pin<STEPPIN, PushPullOutput>,
+    pub fn new(id: Wheel, dir: Pin<DIRPIN, Output<PushPull>>, step: Pin<STEPPIN, Output<PushPull>>,
         tc: TimerCounter<TC>, interrupt: interrupt) -> WheelAssembly<DIRPIN, STEPPIN, TC> {
-            let mut wheel = WheelAssembly { id, dir: true, dir_pin: dir, step_pin: step, tc, command_queue: Queue(heapless::i::Queue::new())};
+            let mut wheel = WheelAssembly { id,
+                dir_pin: dir, is_dir_pin_high: true, 
+                step_pin: step, is_step_pin_high: true, 
+                tc, command_queue: Queue(heapless::i::Queue::new())};
             wheel.dir_pin.set_high().unwrap();
             unsafe {
                 NVIC::unmask(interrupt);
@@ -98,7 +109,11 @@ impl<DIRPIN: PinId, STEPPIN: PinId, TC: Count16> WheelController for WheelAssemb
     }
 
     fn toggle(&mut self) {
-        self.dir_pin.toggle().unwrap();
+        if self.is_dir_pin_high {
+            self.dir_pin.set_low().unwrap();
+        } else {
+            self.dir_pin.set_high().unwrap();
+        }
     }
 }
 
@@ -129,19 +144,26 @@ fn main() -> ! {
     let timer_clock = clocks.tc2_tc3(&gclk5).unwrap();
     let timer_clock1 = clocks.tc4_tc5(&gclk5).unwrap();
 
-    let pins = Pins::new(peripherals.PORT);
+    let mut sets = Pins::new(peripherals.PORT).split();
+    let header_pins = sets.header_pins;
 
-    let mut wheel_front = WheelAssembly::new(Wheel::Front, pins.pb08.into_push_pull_output(), pins.pb09.into_push_pull_output(),
+    let mut wheel_front = WheelAssembly::new(Wheel::Front,
+        header_pins.a0_d0.into_push_pull_output(&mut sets.port),
+        header_pins.a1_d1.into_push_pull_output(&mut sets.port),
         TimerCounter::tc2_(&timer_clock, peripherals.TC2, &mut peripherals.MCLK), interrupt::TC2);
     wheel_front.start(10.ms());
     wheel_front.toggle();
     wheel_front.stop();
 
-    let mut wheel_right = WheelAssembly::new(Wheel::Right, pins.pa07.into_push_pull_output(), pins.pb04.into_push_pull_output(),
+    let mut wheel_right = WheelAssembly::new(Wheel::Right,
+        header_pins.a2_d2.into_push_pull_output(&mut sets.port),
+        header_pins.a3_d3.into_push_pull_output(&mut sets.port),
         TimerCounter::tc3_(&timer_clock, peripherals.TC3, &mut peripherals.MCLK), interrupt::TC3);
     wheel_right.start(10.ms());
 
-    let mut wheel_left = WheelAssembly::new(Wheel::Left, pins.pb05.into_push_pull_output(), pins.pb06.into_push_pull_output(),
+    let mut wheel_left = WheelAssembly::new(Wheel::Left,
+        header_pins.a4_d4.into_push_pull_output(&mut sets.port),
+        header_pins.a5_d5.into_push_pull_output(&mut sets.port),
         TimerCounter::tc4_(&timer_clock1, peripherals.TC4, &mut peripherals.MCLK), interrupt::TC4);
     wheel_left.start(10.ms());
     wheel_left.toggle();
