@@ -4,6 +4,8 @@
 use heapless::consts::U16;
 use panic_halt as _;
 
+use core::fmt::Write;
+
 use cortex_m::interrupt::{free as disable_interrupts};
 use cortex_m::peripheral::NVIC;
 
@@ -110,8 +112,10 @@ impl<DIRPIN: PinId, STEPPIN: PinId, TC: Count16> WheelController for WheelAssemb
 
     fn toggle(&mut self) {
         if self.is_dir_pin_high {
+            self.is_dir_pin_high = false;
             self.dir_pin.set_low().unwrap();
         } else {
+            self.is_dir_pin_high = true;
             self.dir_pin.set_high().unwrap();
         }
     }
@@ -145,6 +149,14 @@ fn main() -> ! {
     let timer_clock1 = clocks.tc4_tc5(&gclk5).unwrap();
 
     let mut sets = Pins::new(peripherals.PORT).split();
+    let mut serial = sets.uart.init(
+        &mut clocks,
+        115200.hz(),
+        peripherals.SERCOM2,
+        &mut peripherals.MCLK,
+        &mut sets.port
+    );
+
     let header_pins = sets.header_pins;
 
     let mut wheel_front = WheelAssembly::new(Wheel::Front,
@@ -190,6 +202,12 @@ fn main() -> ! {
     let mut wheel_left_moved = false;
 
     let mut vehicle_dir = 0;
+
+    for c in b"hello world\n".iter() {
+        nb::block!(serial.write(*c)).unwrap();
+    }
+
+    writeln!(&mut serial, "this is {} example!", "UART").unwrap();
 
     loop {
         if let Some(event) = consumer.dequeue() {
