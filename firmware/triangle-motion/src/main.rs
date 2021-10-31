@@ -165,20 +165,20 @@ fn main() -> ! {
         header_pins.a0_d0.into_push_pull_output(&mut sets.port),
         header_pins.a1_d1.into_push_pull_output(&mut sets.port),
         TimerCounter::tc2_(&timer_clock, peripherals.TC2, &mut peripherals.MCLK), interrupt::TC2);
-    wheel_front.start(25.ms());
+    wheel_front.start(10.ms());
     wheel_front.stop();
 
     let mut wheel_right = WheelAssembly::new(Wheel::Right,
         header_pins.a2_d2.into_push_pull_output(&mut sets.port),
         header_pins.a3_d3.into_push_pull_output(&mut sets.port),
         TimerCounter::tc3_(&timer_clock, peripherals.TC3, &mut peripherals.MCLK), interrupt::TC3);
-    wheel_right.start(25.ms());
+    wheel_right.start(10.ms());
 
     let mut wheel_left = WheelAssembly::new(Wheel::Left,
         header_pins.a4_d4.into_push_pull_output(&mut sets.port),
         header_pins.a5_d5.into_push_pull_output(&mut sets.port),
         TimerCounter::tc4_(&timer_clock1, peripherals.TC4, &mut peripherals.MCLK), interrupt::TC4);
-    wheel_left.start(25.ms());
+    wheel_left.start(10.ms());
     wheel_left.toggle();
 
     unsafe {
