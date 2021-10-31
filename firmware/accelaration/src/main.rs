@@ -9,10 +9,10 @@ use core::fmt::Write;
 use cortex_m::interrupt::{free as disable_interrupts};
 use cortex_m::peripheral::NVIC;
 
-use wio::hal::time::Milliseconds;
+use wio::hal::time::{Microseconds, Milliseconds, Nanoseconds};
 use wio_terminal as wio;
 
-use wio::{entry, Sets, Pins};
+use wio::{Microphone, Pins, Sets, entry};
 use wio::hal::clock::GenericClockController;
 use wio::hal::gpio::v1::*;
 use wio::hal::gpio::v2::{PA07, PB04, PB05, PB06, PB08, PB09};
@@ -69,6 +69,7 @@ struct WheelAssembly<DIRPIN: PinId, STEPPIN: PinId, TC: Count16> {
     is_step_pin_high: bool,
     is_step_pin_move: bool,
     tc: TimerCounter<TC>,
+    timeout: Nanoseconds,
     command_queue: Queue<WheelCommand, U16>
 }
 
@@ -78,7 +79,8 @@ impl<DIRPIN: PinId, STEPPIN: PinId, TC: Count16> WheelAssembly<DIRPIN, STEPPIN, 
             let mut wheel = WheelAssembly { id,
                 dir_pin: dir, is_dir_pin_high: true, 
                 step_pin: step, is_step_pin_high: true, is_step_pin_move: false,
-                tc, command_queue: Queue(heapless::i::Queue::new())};
+                tc, timeout: u32::MAX.ns(),
+                command_queue: Queue(heapless::i::Queue::new())};
             wheel.dir_pin.set_high().unwrap();
             unsafe {
                 NVIC::unmask(interrupt);
@@ -89,7 +91,7 @@ impl<DIRPIN: PinId, STEPPIN: PinId, TC: Count16> WheelAssembly<DIRPIN, STEPPIN, 
 
 
 trait WheelController {
-    fn start(&mut self, timeout: Milliseconds);
+    fn start<T>(&mut self, timeout: T) where T: Into<Nanoseconds>;
     fn stop(&mut self);
     fn restart(&mut self);
     fn toggle(&mut self);
@@ -98,8 +100,9 @@ trait WheelController {
 
 
 impl<DIRPIN: PinId, STEPPIN: PinId, TC: Count16> WheelController for WheelAssembly<DIRPIN, STEPPIN, TC> {
-    fn start(&mut self, timeout: Milliseconds) {
-        self.tc.start(timeout);
+    fn start<T>(&mut self, timeout: T) where T: Into<Nanoseconds> {
+        self.timeout = timeout.into();
+        self.tc.start(self.timeout);
         self.tc.enable_interrupt();
         self.is_step_pin_move = true;
     }
