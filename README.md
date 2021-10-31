@@ -75,6 +75,7 @@ Firmware
 | 9        | TimerContorllerの割込みを使って[3つのステッピングモータを別々の回転数で駆動](./firmware/stepper-motor-a4988-interrupt)させてみる。 |
 | 10       | [試作1号機で往復運動](./firmware/reciprocating-motion)をさせてみる。 |
 | 11       | [往復運動をタイマー割込み](./firmware/reciprocating-timer)でさせてみる。 |
+| 12       | [三角形の軌跡](./firmware/reciprocating-timer)を描くように移動させる。 |
 
 Body
 
