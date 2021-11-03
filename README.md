@@ -76,6 +76,7 @@ Firmware
 | 10       | [試作1号機で往復運動](./firmware/reciprocating-motion)をさせてみる。 |
 | 11       | [往復運動をタイマー割込み](./firmware/reciprocating-timer)でさせてみる。 |
 | 12       | [三角形の軌跡](./firmware/triangle-motion)を描くように移動させる。 |
+| 13       | 段々と速度を上げる[加速運動](./firmware/accelaration)をさせる。 |
 
 Body
 
