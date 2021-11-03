@@ -40,7 +40,7 @@ macro_rules! wheel_interrupt {
         fn $Handler() {
             disable_interrupts(|_cs| unsafe {
                 let mut wheel = $WheelController.as_mut().unwrap();
-                wheel.tc.wait().unwrap();
+                // wheel.tc.wait().unwrap();
                 if (wheel.is_step_pin_move) {
                     if wheel.is_step_pin_high {
                         wheel.is_step_pin_high = false;
@@ -51,6 +51,13 @@ macro_rules! wheel_interrupt {
                     }
                     let mut queue = WHEEL_EVENT_Q.split().0;
                     queue.enqueue(WheelEvent{ id: wheel.id, dir: wheel.is_dir_pin_high}).ok();
+                }
+                if wheel.timeout.0 > (2 * 1000 * 1000).ns().0 {
+                    wheel.timeout = Nanoseconds(wheel.timeout.0 - (10 * 1000).ns().0);
+                    wheel.tc.start(wheel.timeout);
+                    wheel.tc.wait().unwrap();
+                } else {
+                    wheel.tc.wait().unwrap();
                 }
                 // let mut command_queue = wheel.command_queue.split().1;
                 // if let Some(_command) = command_queue.dequeue() {
