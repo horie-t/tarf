@@ -73,10 +73,11 @@ Firmware
 | 7        | A4988モータドライバを使って、[ステッピングモータを駆動](./firmware/stepper-motor-a4988)させてみる。 |
 | 8        | [3つのステッピングモータを駆動](./firmware/stepper-motor-a4988-3motor)させてみる。 |
 | 9        | TimerContorllerの割込みを使って[3つのステッピングモータを別々の回転数で駆動](./firmware/stepper-motor-a4988-timer)させてみる。 |
-| 10       | [試作1号機で往復運動](./firmware/reciprocating-motion)をさせてみる。 |
-| 11       | [往復運動をタイマー割込み](./firmware/reciprocating-timer)でさせてみる。 |
-| 12       | [三角形の軌跡](./firmware/triangle-motion)を描くように移動させる。 |
-| 13       | 段々と速度を上げる[加速運動](./firmware/accelaration)をさせる。 |
+| 10       | [試作1号機で往復運動](./firmware/reciprocating-motion)をさせてみる。                |
+| 11       | [往復運動をタイマー割込み](./firmware/reciprocating-timer)でさせてみる。            |
+| 12       | [三角形の軌跡](./firmware/triangle-motion)を描くように移動させる。                  |
+| 13       | 段々と速度を上げる[加速運動](./firmware/accelaration)をさせる。                     |
+| 14       | [TOF 距離センサ](./firmware/tof-sensor/)を接続する。                                |
 
 Body
 
