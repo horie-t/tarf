@@ -10,4 +10,15 @@
 
 ## ブレッドボードで接続する場合の接続図
 
-![Breadboad](./images/stepper_motor_breadboard.png)
+![Breadboad](./images/breadboard.png)
+
+
+## 測定値をパソコンで確認
+
+Linuxの場合:
+
+minicomをインストールして、以下のコマンドを実行します。
+
+```bash
+minicom -D /dev/ttyUSB0
+```
