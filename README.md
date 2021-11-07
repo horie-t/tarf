@@ -96,3 +96,5 @@ Body
   Wio Terminalのクレートもこの中
 * atsamd51pのRustクレートの[RustDoc](https://docs.rs/atsamd51p/0.9.0/atsamd51p/)
 * wio_terminalクレートの[RustDoc](https://docs.rs/wio_terminal/0.3.0/wio_terminal/)
+
+* VL53L0Xの[使い方](./docs/VL53L0X.md)
