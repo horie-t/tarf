@@ -87,6 +87,7 @@ Body
 | 2        | [ステッピングモータを固定の向きを変更](./cad/core1_3_motor2)                        |
 | 3        | [ステッピングモータとWio Terminal部分との接続部を追加](./cad/core1_3_motor3)        |
 | 4        | [Wio Terminalとバッテリーの収納部](./cad/core2)                                     |
+| 5        | [オムニホイールのハブを作成](./cad/wheel_hub)                                     　|
 
 
 ## 参考情報
