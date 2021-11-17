@@ -88,6 +88,7 @@ Body
 | 3        | [ステッピングモータとWio Terminal部分との接続部を追加](./cad/core1_3_motor3)        |
 | 4        | [Wio Terminalとバッテリーの収納部](./cad/core2)                                     |
 | 5        | [オムニホイールのハブを作成](./cad/wheel_hub)                                     　|
+| 6        | [TOF距離センサを搭載](./cad/core1_motor_sensor_3)                                 　|
 
 
 ## 参考情報
