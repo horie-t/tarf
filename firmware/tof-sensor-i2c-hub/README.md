@@ -8,7 +8,7 @@
 * [Grove 8チャンネルI2Cマルチプレクサ/I2Cハブ(TCA9548A)](https://eleshop.jp/shop/g/gK2C313/)
 * [USBシリアル変換モジュール(通販コード:M-11007)](https://akizukidenshi.com/catalog/g/gM-11007/)
 
-## ブレッドボードで接続する場合の接続図
+## 接続図
 
 ![Breadboad](./images/breadboard.png)
 
