@@ -79,6 +79,7 @@ Firmware
 | 13       | 段々と速度を上げる[加速運動](./firmware/accelaration)をさせる。                     |
 | 14       | [TOF 距離センサ](./firmware/tof-sensor/)を接続する。                                |
 | 15       | [LCDに文字](./firmware/lcd-display/)を表示する。                                    |
+| 16       | [TOF 距離センサを6つ](./firmware/tof-sensor-hub-6/)接続する。                       |
 
 Body
 
