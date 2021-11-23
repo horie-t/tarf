@@ -13,7 +13,7 @@ use embedded_graphics::{
     mono_font::{ascii::FONT_10X20, MonoTextStyle},
     pixelcolor::Rgb565,
     prelude::*,
-    primitives::PrimitiveStyle,
+    primitives::{Rectangle, PrimitiveStyle},
     text::Text,
 };
 
@@ -118,6 +118,16 @@ fn main() -> ! {
                 write!(text, "{}, ", distance).unwrap();
             }
         }
+        Rectangle::new(Point::new(10, 21), Size::new(320, 21))
+        .into_styled(fill)
+        .draw(&mut display).unwrap();
+
+        Text::new(
+            text.as_str(),
+            Point::new(10, 40),
+            character_style)
+        .draw(&mut display).unwrap();
+
         serial.write_str(text.as_str()).unwrap();
         write!(&mut serial, "\r\n").unwrap();
         delay.delay_ms(1000u32);
