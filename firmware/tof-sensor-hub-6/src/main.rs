@@ -1,8 +1,11 @@
 #![no_std]
 #![no_main]
 
+use embedded_hal::blocking::serial;
 use panic_halt as _;
 use core::fmt::Write;
+use heapless::String;
+use heapless::consts::*;
 use vl53l0x::VL53L0x;
 use xca9548a::{SlaveAddr, Xca9548a};
 
@@ -109,12 +112,14 @@ fn main() -> ! {
     .draw(&mut display).unwrap();
 
     loop {
+        let mut text: String<U40> = String::new();
         for i in 0..sensors.len() {
             if let Some(distance) = sensors[i].read_range_single_millimeters_blocking().ok() {
-                write!(&mut serial, "{}: {}, ", i, distance).unwrap();
+                write!(text, "{}, ", distance).unwrap();
             }
         }
+        serial.write_str(text.as_str()).unwrap();
         write!(&mut serial, "\r\n").unwrap();
-        delay.delay_ms(500u32);
+        delay.delay_ms(1000u32);
     }
 }
