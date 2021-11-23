@@ -4,7 +4,7 @@
 
 * [Wio Terminal](https://www.switch-science.com/catalog/6360/)
 * [Wio Terminal バッテリーベース](https://www.switch-science.com/catalog/6816/)
-* [ToF レーザーモジュール(VL53L0X)](https://www.amazon.co.jp/gp/product/B08NDN4L9H/) 2個
+* [ToF レーザーモジュール(VL53L0X)](https://www.amazon.co.jp/gp/product/B08NDN4L9H/) 6個
 * [Grove 8チャンネルI2Cマルチプレクサ/I2Cハブ(TCA9548A)](https://eleshop.jp/shop/g/gK2C313/)
 * [USBシリアル変換モジュール(通販コード:M-11007)](https://akizukidenshi.com/catalog/g/gM-11007/)
 
