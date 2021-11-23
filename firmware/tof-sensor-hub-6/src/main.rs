@@ -1,7 +1,6 @@
 #![no_std]
 #![no_main]
 
-use embedded_hal::blocking::serial;
 use panic_halt as _;
 use core::fmt::Write;
 use heapless::String;
