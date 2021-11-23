@@ -63,33 +63,22 @@ fn main() -> ! {
     writeln!(&mut serial, "Hello, {}!\r", "tarf").unwrap();
 
     delay.delay_ms(2000u32);
-    let mut tof_sensor0 = VL53L0x::new(i2c_ports.i2c0).ok().unwrap();
-    let mut tof_sensor1 = VL53L0x::new(i2c_ports.i2c1).ok().unwrap();
-    let mut tof_sensor2 = VL53L0x::new(i2c_ports.i2c2).ok().unwrap();
-    let mut tof_sensor3 = VL53L0x::new(i2c_ports.i2c3).ok().unwrap();
-    let mut tof_sensor4 = VL53L0x::new(i2c_ports.i2c4).ok().unwrap();
-    let mut tof_sensor5 = VL53L0x::new(i2c_ports.i2c5).ok().unwrap();
+    let mut sensors = [
+        VL53L0x::new(i2c_ports.i2c0).ok().unwrap(),
+        VL53L0x::new(i2c_ports.i2c1).ok().unwrap(),
+        VL53L0x::new(i2c_ports.i2c2).ok().unwrap(),
+        VL53L0x::new(i2c_ports.i2c3).ok().unwrap(),
+        VL53L0x::new(i2c_ports.i2c4).ok().unwrap(),
+        VL53L0x::new(i2c_ports.i2c5).ok().unwrap()
+    ];
 
     writeln!(&mut serial, "VL53L0x intialized.\r").unwrap();
 
     loop {
-        if let Some(distance) = tof_sensor0.read_range_single_millimeters_blocking().ok() {
-            write!(&mut serial, "0: {}, ", distance).unwrap();
-        }
-        if let Some(distance) = tof_sensor1.read_range_single_millimeters_blocking().ok() {
-            write!(&mut serial, "1: {}, ", distance).unwrap();
-        }
-        if let Some(distance) = tof_sensor2.read_range_single_millimeters_blocking().ok() {
-            write!(&mut serial, "2: {}, ", distance).unwrap();
-        }
-        if let Some(distance) = tof_sensor3.read_range_single_millimeters_blocking().ok() {
-            write!(&mut serial, "3: {}, ", distance).unwrap();
-        }
-        if let Some(distance) = tof_sensor4.read_range_single_millimeters_blocking().ok() {
-            write!(&mut serial, "4: {}, ", distance).unwrap();
-        }
-        if let Some(distance) = tof_sensor5.read_range_single_millimeters_blocking().ok() {
-            write!(&mut serial, "5: {}, ", distance).unwrap();
+        for sensor in sensors.iter_mut() {
+            if let Some(distance) = (*sensor).read_range_single_millimeters_blocking().ok() {
+                write!(&mut serial, "0: {}, ", distance).unwrap();
+            }
         }
         write!(&mut serial, "\r\n").unwrap();
         delay.delay_ms(500u32);
