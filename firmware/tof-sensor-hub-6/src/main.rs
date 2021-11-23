@@ -6,6 +6,14 @@ use core::fmt::Write;
 use vl53l0x::VL53L0x;
 use xca9548a::{SlaveAddr, Xca9548a};
 
+use embedded_graphics::{
+    mono_font::{ascii::FONT_10X20, MonoTextStyle},
+    pixelcolor::Rgb565,
+    prelude::*,
+    primitives::PrimitiveStyle,
+    text::Text,
+};
+
 use wio_terminal as wio;
 use wio::hal::clock::GenericClockController;
 use wio::hal::delay::Delay;
@@ -13,7 +21,7 @@ use wio::hal::gpio::*;
 use wio::hal::sercom::{I2CMaster3, PadPin, Sercom3Pad0, Sercom3Pad1};
 use wio::pac::{CorePeripherals, Peripherals};
 use wio::prelude::*;
-use wio::{Pins, UART, entry};
+use wio::{Display, Pins, UART, entry};
 
 
 #[entry]
@@ -30,9 +38,9 @@ fn main() -> ! {
     );
     let mut delay = Delay::new(core.SYST, &mut clocks);    
     let gclk0 = &clocks.gclk0();
-
     let mut pins = Pins::new(peripherals.PORT);
 
+    // UARTを初期化
     let uart = UART {
         tx: pins.txd,
         rx: pins.rxd
@@ -44,7 +52,9 @@ fn main() -> ! {
         &mut peripherals.MCLK,
         &mut pins.port
     );
+    writeln!(&mut serial, "Hello, {}!\r", "tarf").unwrap();
 
+    // TOFセンサ用I2Cを初期化
     let i2c: I2CMaster3<
         Sercom3Pad0<Pa17<PfD>>,
         Sercom3Pad1<Pa16<PfD>>
@@ -60,8 +70,6 @@ fn main() -> ! {
     let i2c_switch = Xca9548a::new(i2c, SlaveAddr::default());
     let i2c_ports = i2c_switch.split();
 
-    writeln!(&mut serial, "Hello, {}!\r", "tarf").unwrap();
-
     delay.delay_ms(2000u32);
     let mut sensors = [
         VL53L0x::new(i2c_ports.i2c0).ok().unwrap(),
@@ -71,13 +79,39 @@ fn main() -> ! {
         VL53L0x::new(i2c_ports.i2c4).ok().unwrap(),
         VL53L0x::new(i2c_ports.i2c5).ok().unwrap()
     ];
-
     writeln!(&mut serial, "VL53L0x intialized.\r").unwrap();
 
+    // LCDの初期化
+    let (mut display, _blacklight) = (Display {
+        miso: pins.lcd_miso,
+        mosi: pins.lcd_mosi,
+        sck: pins.lcd_sck,
+        cs: pins.lcd_cs,
+        dc: pins.lcd_dc,
+        reset: pins.lcd_reset,
+        backlight: pins.lcd_backlight
+    }).init(&mut clocks, peripherals.SERCOM7, &mut peripherals.MCLK, &mut pins.port, 58.mhz(), &mut delay)
+    .ok().unwrap();
+
+    // 背景を黒にする
+    let fill = PrimitiveStyle::with_fill(Rgb565::BLACK);
+    display
+        .bounding_box()
+        .into_styled(fill)
+        .draw(&mut display).unwrap();
+
+    // 文字を表示
+    let character_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
+    Text::new(
+        "Hello, Tarf!",
+        Point::new(10, 20),
+        character_style)
+    .draw(&mut display).unwrap();
+
     loop {
-        for sensor in sensors.iter_mut() {
-            if let Some(distance) = (*sensor).read_range_single_millimeters_blocking().ok() {
-                write!(&mut serial, "0: {}, ", distance).unwrap();
+        for i in 0..sensors.len() {
+            if let Some(distance) = sensors[i].read_range_single_millimeters_blocking().ok() {
+                write!(&mut serial, "{}: {}, ", i, distance).unwrap();
             }
         }
         write!(&mut serial, "\r\n").unwrap();
