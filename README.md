@@ -78,6 +78,7 @@ Firmware
 | 12       | [三角形の軌跡](./firmware/triangle-motion)を描くように移動させる。                  |
 | 13       | 段々と速度を上げる[加速運動](./firmware/accelaration)をさせる。                     |
 | 14       | [TOF 距離センサ](./firmware/tof-sensor/)を接続する。                                |
+| 15       | [LCDに文字](./firmware/lcd-display/)を表示する。                                    |
 
 Body
 
