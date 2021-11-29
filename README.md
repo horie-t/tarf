@@ -91,6 +91,7 @@ Body
 | 4        | [Wio Terminalとバッテリーの収納部](./cad/core2)                                     |
 | 5        | [オムニホイールのハブを作成](./cad/wheel_hub)                                     　|
 | 6        | [TOF距離センサを搭載](./cad/core1_motor_sensor_4)                                 　|
+| 7        | [Wio Terminalとバッテリーの収納部にI2Cハブを搭載](./cad/core2_3)                    |
 
 
 ## 参考情報
