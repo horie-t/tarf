@@ -80,6 +80,7 @@ Firmware
 | 14       | [TOF 距離センサ](./firmware/tof-sensor/)を接続する。                                |
 | 15       | [LCDに文字](./firmware/lcd-display/)を表示する。                                    |
 | 16       | [TOF 距離センサを6つ](./firmware/tof-sensor-hub-6/)接続する。                       |
+| 17       | [TOF 距離センサで連続測定モード](./firmware/tof-sensor-interrupt/)で測定する。          |
 
 Body
 
