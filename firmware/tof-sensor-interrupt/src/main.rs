@@ -25,11 +25,14 @@ use wio::prelude::*;
 use wio::{Pins, UART, entry};
 
 
-struct InterruptEvent {}
+struct InterruptEvent {
+    distance: u16,
+}
 
 struct InterruptPins {
     /// interrupt pin
     pub pin: Pa4<Input<Floating>>,
+    pub tof_sensor: VL53L0x<I2CMaster3<Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>>>,
 }
 
 impl InterruptPins {
@@ -52,6 +55,7 @@ impl InterruptPins {
         InterruptController {
             _eic: eic.finalize(),
             p,
+            tof_sensor: self.tof_sensor
         }
     }
 }
@@ -59,6 +63,7 @@ impl InterruptPins {
 struct InterruptController {
     _eic: eic::EIC,
     p: ExtInt4<Pa4<Interrupt<Floating>>>,
+    tof_sensor: VL53L0x<I2CMaster3<Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>>>,
 }
 
 macro_rules! isr {
@@ -70,6 +75,7 @@ macro_rules! isr {
                     if p.is_interrupt() {
                        p.clear_interrupt();
                         return Some(InterruptEvent {
+                            distance: self.tof_sensor.read_range_mm().unwrap()
                         })
                     }
                 }
@@ -135,12 +141,13 @@ fn main() -> ! {
     writeln!(&mut serial, "Hello, {}!\r", "tarf").unwrap();
 
     delay.delay_ms(2000u32);
-    let mut tof_sensor: VL53L0x<I2CMaster3<Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>>> = VL53L0x::new(i2c).unwrap();
+    let mut tof_sensor = VL53L0x::new(i2c).unwrap();
     tof_sensor.start_continuous(0).unwrap();
     writeln!(&mut serial, "VL53L0x intialized.\r").unwrap();
 
     let interrupt_pins = InterruptPins {
-        pin: pins.a6_d6
+        pin: pins.a6_d6,
+        tof_sensor
     };
     let interrupt_controller = interrupt_pins.init(
         peripherals.EIC,
@@ -158,15 +165,8 @@ fn main() -> ! {
     let mut consumer = unsafe { EVENT_QUEUE.split().1 };
 
     loop {
-        if let Some(_interrupt_event) = consumer.dequeue() {
-            match tof_sensor.read_range_mm() {
-                Ok(meas) => {
-                    write!(&mut serial, "vl: millis {}\r\n", meas).unwrap();
-                }
-                Err(e) => {
-                    write!(&mut serial, "Err meas: {:?}\r\n", e).unwrap();
-                }
-            }
+        if let Some(interrupt_event) = consumer.dequeue() {
+            writeln!(&mut serial, "Distance: {}.\r", interrupt_event.distance).unwrap();
         }
     }
 }
