@@ -15,8 +15,12 @@ use wio::hal::delay::Delay;
 use wio::hal::common::eic;
 use wio::hal::common::eic::pin::*;
 use wio::hal::gpio::*;
+use wio::hal::gpio::v1::Pin;
+use wio::hal::gpio::v2::{Alternate, D, PA16, PA17};
 use wio::hal::sercom::{I2CMaster3, PadPin, Sercom3Pad0, Sercom3Pad1};
-use wio::pac::{CorePeripherals, EIC, MCLK, Peripherals, interrupt};
+use wio::hal::sercom::Pad;
+use wio::hal::sercom::v2::{Pad0, Pad1};
+use wio::pac::{CorePeripherals, EIC, MCLK, Peripherals, SERCOM3, interrupt};
 use wio::prelude::*;
 use wio::{Pins, UART, entry};
 
@@ -131,7 +135,7 @@ fn main() -> ! {
     writeln!(&mut serial, "Hello, {}!\r", "tarf").unwrap();
 
     delay.delay_ms(2000u32);
-    let mut tof_sensor = VL53L0x::new(i2c).unwrap();
+    let mut tof_sensor: VL53L0x<I2CMaster3<Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>>> = VL53L0x::new(i2c).unwrap();
     tof_sensor.start_continuous(0).unwrap();
     writeln!(&mut serial, "VL53L0x intialized.\r").unwrap();
 
