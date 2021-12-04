@@ -29,20 +29,33 @@ struct InterruptEvent {
     distance: u16,
 }
 
-struct InterruptPins {
+struct InterruptPins<'a> {
     /// interrupt pin
     pub pin: Pa4<Input<Floating>>,
-    // pub tof_sensor: VL53L0x<I2CMaster3<Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>>>,
+    pub tof_sensor: VL53L0x<
+        I2cSlave<
+            'a, Xca9548a<
+                I2CMaster3<
+                    Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>,
+                    Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>,
+                >,
+            >,
+            I2CMaster3<
+                Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>,
+                Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>,
+            >,
+        >,
+    >,
 }
 
-impl InterruptPins {
+impl<'a> InterruptPins<'a> {
     pub fn init(
         self,
         eic: EIC,
         clocks: &mut GenericClockController,
         mclk: &mut MCLK,
         port: &mut Port,
-    ) -> InterruptController {
+    ) -> InterruptController<'a> {
         let clk = clocks.gclk1();
         let mut eic = eic::init_with_ulp32k(mclk, clocks.eic(&clk).unwrap(), eic);
         eic.button_debounce_pins(&[self.pin.id()]);
@@ -53,15 +66,28 @@ impl InterruptPins {
         InterruptController {
             _eic: eic.finalize(),
             p,
-            // tof_sensor: self.tof_sensor
+            tof_sensor: self.tof_sensor
         }
     }
 }
 
-struct InterruptController {
+struct InterruptController<'a> {
     _eic: eic::EIC,
     p: ExtInt4<Pa4<Interrupt<Floating>>>,
-    // tof_sensor: VL53L0x<I2CMaster3<Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>>>,
+    pub tof_sensor: VL53L0x<
+        I2cSlave<
+            'a, Xca9548a<
+                I2CMaster3<
+                    Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>,
+                    Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>,
+                >,
+            >,
+            I2CMaster3<
+                Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>,
+                Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>,
+            >,
+        >,
+    >,
 }
 
 macro_rules! isr {
@@ -72,12 +98,8 @@ macro_rules! isr {
                     let p = &mut self.$Pin;
                     if p.is_interrupt() {
                         p.clear_interrupt();
-                        let distance = unsafe {
-                            let tof_sensor = TOF.as_mut().unwrap();
-                            tof_sensor.read_range_mm().unwrap()
-                        };
                         return Some(InterruptEvent {
-                            distance
+                            distance: self.tof_sensor.read_range_mm().unwrap()
                         })
                     }
                 }
@@ -88,7 +110,7 @@ macro_rules! isr {
     };
 }
 
-impl InterruptController {
+impl<'a> InterruptController<'a> {
     pub fn enable(&self, nvic: &mut NVIC) {
         unsafe {
             nvic.set_priority(interrupt::EIC_EXTINT_4, 1);
@@ -146,25 +168,24 @@ fn main() -> ! {
         delay.delay_ms(2000u32);
         let mut tof_sensor = VL53L0x::new(i2c_ports.i2c0).unwrap();
         tof_sensor.start_continuous(0).unwrap();
-        TOF = Some(tof_sensor);
-    }
-    writeln!(&mut serial, "VL53L0x intialized.\r").unwrap();
+        writeln!(&mut serial, "VL53L0x intialized.\r").unwrap();
 
-    let interrupt_pins = InterruptPins {
-        pin: pins.a6_d6,
-        // tof_sensor
-    };
-    let interrupt_controller = interrupt_pins.init(
-        peripherals.EIC,
-        &mut clocks,
-        &mut peripherals.MCLK,
-        &mut pins.port,
-    );
-    let nvic = &mut core.NVIC;
-    disable_interrupts(|_| unsafe {
-        interrupt_controller.enable(nvic);
-        INTERRUPT_CTRLR = Some(interrupt_controller);
-    });
+        let interrupt_pins = InterruptPins {
+            pin: pins.a6_d6,
+            tof_sensor
+        };
+        let interrupt_controller = interrupt_pins.init(
+            peripherals.EIC,
+            &mut clocks,
+            &mut peripherals.MCLK,
+            &mut pins.port,
+        );
+        let nvic = &mut core.NVIC;
+        disable_interrupts(|_| unsafe {
+            interrupt_controller.enable(nvic);
+            INTERRUPT_CTRLR = Some(interrupt_controller);
+        });
+    }
     writeln!(&mut serial, "set up interrupt.\r").unwrap();
 
     let mut consumer = unsafe { EVENT_QUEUE.split().1 };
@@ -176,20 +197,11 @@ fn main() -> ! {
     }
 }
 
-static mut I2C_SWITCH: Option<Xca9548a<I2CMaster3<Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>>>> = None;
-static mut TOF: Option<
-    VL53L0x<
-        I2cSlave<
-            Xca9548a<
-                I2CMaster3<
-                    Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>,
-                    Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>,
-                >,
-            >,
-            I2CMaster3<
-                Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>,
-                Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>,
-            >,
+static mut I2C_SWITCH: Option<
+    Xca9548a<
+        I2CMaster3<
+            Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>,
+            Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>,
         >,
     >,
 > = None;
