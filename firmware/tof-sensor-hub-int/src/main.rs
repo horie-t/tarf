@@ -30,22 +30,10 @@ struct SensorEvent {
 }
 
 struct TofSensors<'a> {
-    /// interrupt pin
-    pub pin: Pa4<Input<Floating>>,
-    pub i2c: VL53L0x<
-        I2cSlave<
-            'a, Xca9548a<
-                I2CMaster3<
-                    Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>,
-                    Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>,
-                >,
-            >,
-            I2CMaster3<
-                Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>,
-                Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>,
-            >,
-        >,
-    >,
+    pin: Pa4<Input<Floating>>,
+    i2c: VL53L0x<I2cSlave<
+                    'a, Xca9548a<I2CMaster3<Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>>>,
+                    I2CMaster3<Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>,Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>>>>,
 }
 
 impl<'a> TofSensors<'a> {
@@ -60,12 +48,12 @@ impl<'a> TofSensors<'a> {
         let mut eic = eic::init_with_ulp32k(mclk, clocks.eic(&clk).unwrap(), eic);
         eic.button_debounce_pins(&[self.pin.id()]);
 
-        let mut p = self.pin.into_floating_ei(port);
-        p.sense(&mut eic, Sense::FALL);
-        p.enable_interrupt(&mut eic);
+        let mut pin = self.pin.into_floating_ei(port);
+        pin.sense(&mut eic, Sense::FALL);
+        pin.enable_interrupt(&mut eic);
         TofSensorController {
             _eic: eic.finalize(),
-            p,
+            pin,
             i2c: self.i2c
         }
     }
@@ -73,21 +61,10 @@ impl<'a> TofSensors<'a> {
 
 struct TofSensorController<'a> {
     _eic: eic::EIC,
-    p: ExtInt4<Pa4<Interrupt<Floating>>>,
-    pub i2c: VL53L0x<
-        I2cSlave<
-            'a, Xca9548a<
-                I2CMaster3<
-                    Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>,
-                    Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>,
-                >,
-            >,
-            I2CMaster3<
-                Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>,
-                Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>,
-            >,
-        >,
-    >,
+    pin: ExtInt4<Pa4<Interrupt<Floating>>>,
+    i2c: VL53L0x<I2cSlave<
+                    'a, Xca9548a<I2CMaster3<Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>>>,
+                    I2CMaster3<Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>,Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>>>>,
 }
 
 macro_rules! isr {
@@ -118,7 +95,7 @@ impl<'a> TofSensorController<'a> {
         }
     }
 
-    isr!(interrupt_extint4, InterruptEvent, p);
+    isr!(interrupt_extint4, InterruptEvent, pin);
 }
 
 #[entry]
@@ -149,23 +126,23 @@ fn main() -> ! {
         &mut peripherals.MCLK,
         &mut pins.port,
     );
+    writeln!(&mut serial, "Hello, {}!\r", "tarf").unwrap();
+    delay.delay_ms(1000u32);
+
+    let i2c: I2CMaster3<Sercom3Pad0<Pa17<PfD>>, Sercom3Pad1<Pa16<PfD>>> = I2CMaster3::new(
+        &clocks.sercom3_core(&gclk0).unwrap(),
+        400.khz(),
+        peripherals.SERCOM3,
+        &mut peripherals.MCLK,
+        pins.i2c1_sda.into_pad(&mut pins.port),
+        pins.i2c1_scl.into_pad(&mut pins.port),
+    );
+    let i2c_switch = Xca9548a::new(i2c, SlaveAddr::default());
 
     unsafe {
-        let i2c: I2CMaster3<Sercom3Pad0<Pa17<PfD>>, Sercom3Pad1<Pa16<PfD>>> = I2CMaster3::new(
-            &clocks.sercom3_core(&gclk0).unwrap(),
-            400.khz(),
-            peripherals.SERCOM3,
-            &mut peripherals.MCLK,
-            pins.i2c1_sda.into_pad(&mut pins.port),
-            pins.i2c1_scl.into_pad(&mut pins.port),
-        );
-        let i2c_switch = Xca9548a::new(i2c, SlaveAddr::default());
         I2C_SWITCH = Some(i2c_switch);
         let i2c_ports = I2C_SWITCH.as_mut().unwrap().split();
 
-        writeln!(&mut serial, "Hello, {}!\r", "tarf").unwrap();
-
-        delay.delay_ms(2000u32);
         let mut i2c = VL53L0x::new(i2c_ports.i2c0).unwrap();
         i2c.start_continuous(0).unwrap();
         writeln!(&mut serial, "VL53L0x intialized.\r").unwrap();
