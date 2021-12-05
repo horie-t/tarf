@@ -30,15 +30,15 @@ struct SensorEvent {
 }
 
 struct TofSensors<'a> {
-    pin: Pa4<Input<Floating>>,
-    i2c: VL53L0x<I2cSlave<
+    sensor1_gpio1: Pa4<Input<Floating>>,
+    sensor1_i2c: VL53L0x<I2cSlave<
                     'a, Xca9548a<I2CMaster3<Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>>>,
                     I2CMaster3<Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>,Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>>>>,
 }
 
 impl<'a> TofSensors<'a> {
     pub fn init(
-        self,
+        mut self,
         eic: EIC,
         clocks: &mut GenericClockController,
         mclk: &mut MCLK,
@@ -46,29 +46,31 @@ impl<'a> TofSensors<'a> {
     ) -> TofSensorController<'a> {
         let clk = clocks.gclk1();
         let mut eic = eic::init_with_ulp32k(mclk, clocks.eic(&clk).unwrap(), eic);
-        eic.button_debounce_pins(&[self.pin.id()]);
 
-        let mut pin = self.pin.into_floating_ei(port);
-        pin.sense(&mut eic, Sense::FALL);
-        pin.enable_interrupt(&mut eic);
+        let mut sensor1_gpio1 = self.sensor1_gpio1.into_floating_ei(port);
+        sensor1_gpio1.sense(&mut eic, Sense::FALL);
+        sensor1_gpio1.enable_interrupt(&mut eic);
+
+        self.sensor1_i2c.start_continuous(0).unwrap();
+
         TofSensorController {
             _eic: eic.finalize(),
-            pin,
-            i2c: self.i2c
+            sensor1_gpio1,
+            sensor1_i2c: self.sensor1_i2c
         }
     }
 }
 
 struct TofSensorController<'a> {
     _eic: eic::EIC,
-    pin: ExtInt4<Pa4<Interrupt<Floating>>>,
-    i2c: VL53L0x<I2cSlave<
+    sensor1_gpio1: ExtInt4<Pa4<Interrupt<Floating>>>,
+    sensor1_i2c: VL53L0x<I2cSlave<
                     'a, Xca9548a<I2CMaster3<Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>>>,
                     I2CMaster3<Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>,Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>>>>,
 }
 
 macro_rules! isr {
-    ($Handler:ident, $($Event:expr, $Pin:ident),+) => {
+    ($Handler:ident, $($Event:expr, $Pin:ident, $I2c:ident),+) => {
         pub fn $Handler(&mut self) -> Option<SensorEvent> {
             $(
                 {
@@ -76,7 +78,7 @@ macro_rules! isr {
                     if p.is_interrupt() {
                         p.clear_interrupt();
                         return Some(SensorEvent {
-                            distance: self.i2c.read_range_mm().unwrap()
+                            distance: self.$I2c.read_range_mm().unwrap()
                         })
                     }
                 }
@@ -95,7 +97,7 @@ impl<'a> TofSensorController<'a> {
         }
     }
 
-    isr!(interrupt_extint4, InterruptEvent, pin);
+    isr!(interrupt_extint4, InterruptEvent, sensor1_gpio1, sensor1_i2c);
 }
 
 #[entry]
@@ -143,13 +145,9 @@ fn main() -> ! {
         I2C_SWITCH = Some(i2c_switch);
         let i2c_ports = I2C_SWITCH.as_mut().unwrap().split();
 
-        let mut i2c = VL53L0x::new(i2c_ports.i2c0).unwrap();
-        i2c.start_continuous(0).unwrap();
-        writeln!(&mut serial, "VL53L0x intialized.\r").unwrap();
-
         let interrupt_pins = TofSensors {
-            pin: pins.a6_d6,
-            i2c
+            sensor1_gpio1: pins.a6_d6,
+            sensor1_i2c: VL53L0x::new(i2c_ports.i2c0).unwrap()
         };
         let interrupt_controller = interrupt_pins.init(
             peripherals.EIC,
@@ -158,12 +156,12 @@ fn main() -> ! {
             &mut pins.port,
         );
         let nvic = &mut core.NVIC;
-        disable_interrupts(|_| unsafe {
+        disable_interrupts(|_| {
             interrupt_controller.enable(nvic);
             TOF_SENSOR_CTRLR = Some(interrupt_controller);
         });
     }
-    writeln!(&mut serial, "set up interrupt.\r").unwrap();
+    writeln!(&mut serial, "VL53L0x intialized.\r").unwrap();
 
     let mut consumer = unsafe { EVENT_QUEUE.split().1 };
 
