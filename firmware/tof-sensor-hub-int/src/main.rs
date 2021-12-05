@@ -26,12 +26,18 @@ use wio::{entry, Pins, UART};
 use wio_terminal as wio;
 
 struct SensorEvent {
+    id: u16,
     distance: u16,
 }
 
 struct TofSensors<'a> {
     sensor1_gpio1: Pa4<Input<Floating>>,
     sensor1_i2c: VL53L0x<I2cSlave<
+                    'a, Xca9548a<I2CMaster3<Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>>>,
+                    I2CMaster3<Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>,Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>>>>,
+
+    sensor2_gpio1: Pb7<Input<Floating>>,
+    sensor2_i2c: VL53L0x<I2cSlave<
                     'a, Xca9548a<I2CMaster3<Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>>>,
                     I2CMaster3<Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>,Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>>>>,
 }
@@ -50,13 +56,19 @@ impl<'a> TofSensors<'a> {
         let mut sensor1_gpio1 = self.sensor1_gpio1.into_floating_ei(port);
         sensor1_gpio1.sense(&mut eic, Sense::FALL);
         sensor1_gpio1.enable_interrupt(&mut eic);
-
         self.sensor1_i2c.start_continuous(0).unwrap();
+
+        let mut sensor2_gpio1 = self.sensor2_gpio1.into_floating_ei(port);
+        sensor2_gpio1.sense(&mut eic, Sense::FALL);
+        sensor2_gpio1.enable_interrupt(&mut eic);
+        self.sensor2_i2c.start_continuous(0).unwrap();
 
         TofSensorController {
             _eic: eic.finalize(),
             sensor1_gpio1,
-            sensor1_i2c: self.sensor1_i2c
+            sensor1_i2c: self.sensor1_i2c,
+            sensor2_gpio1,
+            sensor2_i2c: self.sensor2_i2c,
         }
     }
 }
@@ -67,10 +79,14 @@ struct TofSensorController<'a> {
     sensor1_i2c: VL53L0x<I2cSlave<
                     'a, Xca9548a<I2CMaster3<Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>>>,
                     I2CMaster3<Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>,Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>>>>,
+    sensor2_gpio1: ExtInt7<Pb7<Interrupt<Floating>>>,
+    sensor2_i2c: VL53L0x<I2cSlave<
+                    'a, Xca9548a<I2CMaster3<Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>>>,
+                    I2CMaster3<Pad<SERCOM3, Pad0, Pin<PA17, Alternate<D>>>,Pad<SERCOM3, Pad1, Pin<PA16, Alternate<D>>>>>>,
 }
 
 macro_rules! isr {
-    ($Handler:ident, $($Event:expr, $Pin:ident, $I2c:ident),+) => {
+    ($Handler:ident, $($Event:expr, $Pin:ident, $I2c:ident, $SensorId:expr),+) => {
         pub fn $Handler(&mut self) -> Option<SensorEvent> {
             $(
                 {
@@ -78,6 +94,7 @@ macro_rules! isr {
                     if p.is_interrupt() {
                         p.clear_interrupt();
                         return Some(SensorEvent {
+                            id: $SensorId,
                             distance: self.$I2c.read_range_mm().unwrap()
                         })
                     }
@@ -94,10 +111,13 @@ impl<'a> TofSensorController<'a> {
         unsafe {
             nvic.set_priority(interrupt::EIC_EXTINT_4, 1);
             NVIC::unmask(interrupt::EIC_EXTINT_4);
+            nvic.set_priority(interrupt::EIC_EXTINT_7, 1);
+            NVIC::unmask(interrupt::EIC_EXTINT_7);
         }
     }
 
-    isr!(interrupt_extint4, InterruptEvent, sensor1_gpio1, sensor1_i2c);
+    isr!(interrupt_extint4, SensorEvent, sensor1_gpio1, sensor1_i2c, 1u16);
+    isr!(interrupt_extint7, SensorEvent, sensor2_gpio1, sensor2_i2c, 2u16);
 }
 
 #[entry]
@@ -147,7 +167,9 @@ fn main() -> ! {
 
         let interrupt_pins = TofSensors {
             sensor1_gpio1: pins.a6_d6,
-            sensor1_i2c: VL53L0x::new(i2c_ports.i2c0).unwrap()
+            sensor1_i2c: VL53L0x::new(i2c_ports.i2c0).unwrap(),
+            sensor2_gpio1: pins.a7_d7,
+            sensor2_i2c: VL53L0x::new(i2c_ports.i2c1).unwrap(),
         };
         let interrupt_controller = interrupt_pins.init(
             peripherals.EIC,
@@ -167,7 +189,7 @@ fn main() -> ! {
 
     loop {
         if let Some(interrupt_event) = consumer.dequeue() {
-            writeln!(&mut serial, "Distance: {}.\r", interrupt_event.distance).unwrap();
+            writeln!(&mut serial, "ID: {}, Distance: {}.\r", interrupt_event.id, interrupt_event.distance).unwrap();
         }
     }
 }
@@ -205,6 +227,7 @@ macro_rules! ext_interrupt {
         }
 
         _ext_interrupt_handler!(EIC_EXTINT_4, interrupt_extint4);
+        _ext_interrupt_handler!(EIC_EXTINT_7, interrupt_extint7);
     };
 }
 
