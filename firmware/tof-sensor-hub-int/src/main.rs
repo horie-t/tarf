@@ -25,14 +25,14 @@ use wio::prelude::*;
 use wio::{entry, Pins, UART};
 use wio_terminal as wio;
 
-struct InterruptEvent {
+struct SensorEvent {
     distance: u16,
 }
 
-struct InterruptPins<'a> {
+struct TofSensors<'a> {
     /// interrupt pin
     pub pin: Pa4<Input<Floating>>,
-    pub tof_sensor: VL53L0x<
+    pub i2c: VL53L0x<
         I2cSlave<
             'a, Xca9548a<
                 I2CMaster3<
@@ -48,14 +48,14 @@ struct InterruptPins<'a> {
     >,
 }
 
-impl<'a> InterruptPins<'a> {
+impl<'a> TofSensors<'a> {
     pub fn init(
         self,
         eic: EIC,
         clocks: &mut GenericClockController,
         mclk: &mut MCLK,
         port: &mut Port,
-    ) -> InterruptController<'a> {
+    ) -> TofSensorController<'a> {
         let clk = clocks.gclk1();
         let mut eic = eic::init_with_ulp32k(mclk, clocks.eic(&clk).unwrap(), eic);
         eic.button_debounce_pins(&[self.pin.id()]);
@@ -63,18 +63,18 @@ impl<'a> InterruptPins<'a> {
         let mut p = self.pin.into_floating_ei(port);
         p.sense(&mut eic, Sense::FALL);
         p.enable_interrupt(&mut eic);
-        InterruptController {
+        TofSensorController {
             _eic: eic.finalize(),
             p,
-            tof_sensor: self.tof_sensor
+            i2c: self.i2c
         }
     }
 }
 
-struct InterruptController<'a> {
+struct TofSensorController<'a> {
     _eic: eic::EIC,
     p: ExtInt4<Pa4<Interrupt<Floating>>>,
-    pub tof_sensor: VL53L0x<
+    pub i2c: VL53L0x<
         I2cSlave<
             'a, Xca9548a<
                 I2CMaster3<
@@ -92,14 +92,14 @@ struct InterruptController<'a> {
 
 macro_rules! isr {
     ($Handler:ident, $($Event:expr, $Pin:ident),+) => {
-        pub fn $Handler(&mut self) -> Option<InterruptEvent> {
+        pub fn $Handler(&mut self) -> Option<SensorEvent> {
             $(
                 {
                     let p = &mut self.$Pin;
                     if p.is_interrupt() {
                         p.clear_interrupt();
-                        return Some(InterruptEvent {
-                            distance: self.tof_sensor.read_range_mm().unwrap()
+                        return Some(SensorEvent {
+                            distance: self.i2c.read_range_mm().unwrap()
                         })
                     }
                 }
@@ -110,7 +110,7 @@ macro_rules! isr {
     };
 }
 
-impl<'a> InterruptController<'a> {
+impl<'a> TofSensorController<'a> {
     pub fn enable(&self, nvic: &mut NVIC) {
         unsafe {
             nvic.set_priority(interrupt::EIC_EXTINT_4, 1);
@@ -166,13 +166,13 @@ fn main() -> ! {
         writeln!(&mut serial, "Hello, {}!\r", "tarf").unwrap();
 
         delay.delay_ms(2000u32);
-        let mut tof_sensor = VL53L0x::new(i2c_ports.i2c0).unwrap();
-        tof_sensor.start_continuous(0).unwrap();
+        let mut i2c = VL53L0x::new(i2c_ports.i2c0).unwrap();
+        i2c.start_continuous(0).unwrap();
         writeln!(&mut serial, "VL53L0x intialized.\r").unwrap();
 
-        let interrupt_pins = InterruptPins {
+        let interrupt_pins = TofSensors {
             pin: pins.a6_d6,
-            tof_sensor
+            i2c
         };
         let interrupt_controller = interrupt_pins.init(
             peripherals.EIC,
@@ -183,7 +183,7 @@ fn main() -> ! {
         let nvic = &mut core.NVIC;
         disable_interrupts(|_| unsafe {
             interrupt_controller.enable(nvic);
-            INTERRUPT_CTRLR = Some(interrupt_controller);
+            TOF_SENSOR_CTRLR = Some(interrupt_controller);
         });
     }
     writeln!(&mut serial, "set up interrupt.\r").unwrap();
@@ -205,12 +205,12 @@ static mut I2C_SWITCH: Option<
         >,
     >,
 > = None;
-static mut INTERRUPT_CTRLR: Option<InterruptController> = None;
-static mut EVENT_QUEUE: Queue<InterruptEvent, U16> = Queue(heapless::i::Queue::new());
+static mut TOF_SENSOR_CTRLR: Option<TofSensorController> = None;
+static mut EVENT_QUEUE: Queue<SensorEvent, U16> = Queue(heapless::i::Queue::new());
 
 macro_rules! ext_interrupt {
-    ($controller:ident, unsafe fn $func_name:ident ($cs:ident: $cstype:ty, $event:ident: InterruptEvent) $code:block) => {
-        unsafe fn $func_name($cs: $cstype, $event: InterruptEvent) {
+    ($controller:ident, unsafe fn $func_name:ident ($cs:ident: $cstype:ty, $event:ident: SensorEvent) $code:block) => {
+        unsafe fn $func_name($cs: $cstype, $event: SensorEvent) {
             $code
         }
 
@@ -234,8 +234,8 @@ macro_rules! ext_interrupt {
 }
 
 ext_interrupt!(
-    INTERRUPT_CTRLR,
-    unsafe fn on_interrupt_event(_cs: &CriticalSection, event: InterruptEvent) {
+    TOF_SENSOR_CTRLR,
+    unsafe fn on_interrupt_event(_cs: &CriticalSection, event: SensorEvent) {
         let mut q = EVENT_QUEUE.split().0;
         q.enqueue(event).ok();
     }
