@@ -1,6 +1,6 @@
 [package]
 authors = ["HORIE Tetsuya <horie-t@users.noreply.github.com>"]
-name = "stepper-motor"
+name = "tarf-straight-maze"
 edition = "2018"
 version = "0.1.0"
 
