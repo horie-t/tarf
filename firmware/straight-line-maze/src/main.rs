@@ -1,14 +1,18 @@
 #![no_std]
 #![no_main]
 
+use cortex_m::interrupt::{free as disable_interrupts};
+use cortex_m::peripheral::NVIC;
+
 use panic_halt as _;
 
 use wio_terminal as wio;
 use wio::entry;
 use wio::hal::clock::GenericClockController;
 use wio::hal::delay::Delay;
-use wio::hal::gpio::v2::{Output, Pin, PinId, Pins, PushPull};
-use wio::pac::{CorePeripherals, Peripherals};
+use wio::hal::gpio::v2::{Disabled, Floating, Output, PB08, PB09, Pin, PinId, Pins, PushPull};
+use wio::hal::timer::{Count16, TimerCounter};
+use wio::pac::{interrupt, CorePeripherals, Peripherals, TC2};
 use wio::prelude::*;
 
 #[derive(Clone, Copy)]
@@ -17,13 +21,31 @@ enum WheelRotateDirection {
     CounterClockWise,
 }
 
-struct Wheel<S: PinId, D: PinId> {
+struct Wheel<S: PinId, D: PinId, T: Count16> {
     id: u32,
     step_pin: Pin<S, Output<PushPull>>,
     direction_pin: Pin<D, Output<PushPull>>,
+    timer_counter: TimerCounter<T>,
 }
 
-impl<S: PinId, D: PinId> Wheel<S, D> {
+impl<S: PinId, D: PinId, T: Count16> Wheel<S, D, T> {
+    fn new(id: u32, step_pin: Pin<S, Disabled<Floating>>, direction_pin: Pin<D, Disabled<Floating>>,
+        timer_counter: TimerCounter<T>, interrupt: interrupt) -> Wheel<S, D, T>{
+            let mut wheel = Wheel {
+                id,
+                step_pin: step_pin.into_push_pull_output(),
+                direction_pin: direction_pin.into_push_pull_output(),
+                timer_counter
+            };
+            wheel.set_rotate_direction(WheelRotateDirection::ClockWise);
+
+            unsafe {
+                NVIC::unmask(interrupt);
+            }
+
+            wheel
+    }
+
     fn step(&mut self) {
         self.step_pin.toggle().unwrap();
     }
@@ -38,11 +60,33 @@ impl<S: PinId, D: PinId> Wheel<S, D> {
             }
         }
     }
+
+    fn start(&mut self, rpm: f32) {
+        let pulse_hz = (((2_f32 * 200_f32) / 60_f32 * rpm) as u32).hz();
+        self.timer_counter.start(pulse_hz);
+        // self.timer_counter.start(20.ms());
+        self.timer_counter.enable_interrupt();
+    }
 }
 
-struct RunningSystem<S0: PinId, D0: PinId> {
-    wheel_0: Wheel<S0, D0>,
+macro_rules! wheel_interrupt {
+    ($RunningSystem:ident, $Handler:ident, $Wheel:ident) => {
+        #[interrupt]
+        fn $Handler() {
+            disable_interrupts(|_cs| unsafe {
+                let running_system = $RunningSystem.as_mut().unwrap();
+                running_system.$Wheel.step();
+                running_system.$Wheel.timer_counter.wait().unwrap();
+            });
+        }
+    };
 }
+
+struct RunningSystem<S0: PinId, D0: PinId, T0: Count16> {
+    wheel_0: Wheel<S0, D0, T0>,
+}
+
+static mut RUNNING_SYSTEM: Option<RunningSystem<PB08, PB09, TC2>> = None;
 
 #[entry]
 fn main() -> ! {
@@ -60,25 +104,25 @@ fn main() -> ! {
 
     let gclk5 = clocks.get_gclk(wio::pac::gclk::pchctrl::GEN_A::GCLK5)
         .unwrap();
-    let timer_clock = clocks.tc2_tc3(&gclk5).unwrap();
-    let timer_clock1 = clocks.tc4_tc5(&gclk5).unwrap();
+    let tc2_tc3 = clocks.tc2_tc3(&gclk5).unwrap();
+    let tc4_tc5 = clocks.tc4_tc5(&gclk5).unwrap();
 
     let pins = Pins::new(peripherals.PORT);
         
-    let wheel_0 = Wheel {
-        id: 0,
-        step_pin: pins.pb08.into_push_pull_output(),
-        direction_pin: pins.pb09.into_push_pull_output(),
-    };
+    let wheel_0 = Wheel::new(0, pins.pb08, pins.pb09,
+        TimerCounter::tc2_(&tc2_tc3, peripherals.TC2, &mut peripherals.MCLK),
+        interrupt::TC2,
+    );
 
     let mut running_system = RunningSystem {
         wheel_0,
     };
-
-    running_system.wheel_0.set_rotate_direction(WheelRotateDirection::ClockWise);
+    running_system.wheel_0.start(20_f32);
+    unsafe {
+        RUNNING_SYSTEM = Some(running_system);
+        wheel_interrupt!(RUNNING_SYSTEM, TC2, wheel_0);
+    }
 
     loop {
-        running_system.wheel_0.step();
-        delay.delay_ms(10u32);
     }
 }
