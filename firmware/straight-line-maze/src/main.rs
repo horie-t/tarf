@@ -10,9 +10,9 @@ use wio_terminal as wio;
 use wio::entry;
 use wio::hal::clock::GenericClockController;
 use wio::hal::delay::Delay;
-use wio::hal::gpio::v2::{Disabled, Floating, Output, PB08, PB09, Pin, PinId, Pins, PushPull};
+use wio::hal::gpio::v2::{Disabled, Floating, Output, PA07, PB04, PB05, PB06, PB08, PB09, Pin, PinId, Pins, PushPull};
 use wio::hal::timer::{Count16, TimerCounter};
-use wio::pac::{interrupt, CorePeripherals, Peripherals, TC2};
+use wio::pac::{interrupt, CorePeripherals, Peripherals, TC2, TC3, TC4};
 use wio::prelude::*;
 
 #[derive(Clone, Copy)]
@@ -53,10 +53,10 @@ impl<S: PinId, D: PinId, T: Count16> Wheel<S, D, T> {
     fn set_rotate_direction(&mut self, dir: WheelRotateDirection) {
         match dir {
             WheelRotateDirection::ClockWise => {
-                self.direction_pin.set_high();
+                self.direction_pin.set_high().unwrap();
             },
             WheelRotateDirection::CounterClockWise => {
-                self.direction_pin.set_low();
+                self.direction_pin.set_low().unwrap();
             }
         }
     }
@@ -82,11 +82,13 @@ macro_rules! wheel_interrupt {
     };
 }
 
-struct RunningSystem<S0: PinId, D0: PinId, T0: Count16> {
+struct RunningSystem<S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1: Count16, S2: PinId, D2: PinId, T2: Count16> {
     wheel_0: Wheel<S0, D0, T0>,
+    wheel_1: Wheel<S1, D1, T1>,
+    wheel_2: Wheel<S2, D2, T2>,
 }
 
-static mut RUNNING_SYSTEM: Option<RunningSystem<PB08, PB09, TC2>> = None;
+static mut RUNNING_SYSTEM: Option<RunningSystem<PB08, PB09, TC2, PA07, PB04, TC3, PB05, PB06, TC4>> = None;
 
 #[entry]
 fn main() -> ! {
@@ -113,14 +115,33 @@ fn main() -> ! {
         TimerCounter::tc2_(&tc2_tc3, peripherals.TC2, &mut peripherals.MCLK),
         interrupt::TC2,
     );
+    let wheel_1 = Wheel::new(1, pins.pa07, pins.pb04,
+        TimerCounter::tc3_(&tc2_tc3, peripherals.TC3, &mut peripherals.MCLK),
+        interrupt::TC3,
+    );
+    let wheel_2 = Wheel::new(2, pins.pb05, pins.pb06,
+        TimerCounter::tc4_(&tc4_tc5, peripherals.TC4, &mut peripherals.MCLK),
+        interrupt::TC4,
+    );
 
     let mut running_system = RunningSystem {
         wheel_0,
+        wheel_1,
+        wheel_2,
     };
-    running_system.wheel_0.start(20_f32);
+
+    running_system.wheel_0.start(10_f32);
+
+    running_system.wheel_1.set_rotate_direction(WheelRotateDirection::CounterClockWise);
+    running_system.wheel_1.start(20_f32);
+
+    running_system.wheel_2.start(10_f32);
+
     unsafe {
         RUNNING_SYSTEM = Some(running_system);
         wheel_interrupt!(RUNNING_SYSTEM, TC2, wheel_0);
+        wheel_interrupt!(RUNNING_SYSTEM, TC3, wheel_1);
+        wheel_interrupt!(RUNNING_SYSTEM, TC4, wheel_2);
     }
 
     loop {
