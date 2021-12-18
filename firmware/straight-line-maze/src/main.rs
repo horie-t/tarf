@@ -95,71 +95,60 @@ struct RunningSystem<S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1
 
 static mut RUNNING_SYSTEM: Option<RunningSystem<PB08, PB09, TC2, PA07, PB04, TC3, PB05, PB06, TC4>> = None;
 
-struct ButtonPins {
-    /// button3 pin
-    pub button3: Pc28<Input<Floating>>,
+struct Button {
+    queue: Queue<ButtonEvent, U8>,
+    pin: ExtInt12<Pc28<Interrupt<Floating>>>,
 }
 
-impl ButtonPins {
-    pub fn init(
-        self,
+impl Button {
+    pub fn new(
+        pin: Pc28<Input<Floating>>,
+        queue: Queue<ButtonEvent, U8>,
         eic: &mut ConfigurableEIC,
-        mclk: &mut MCLK,
         port: &mut Port,
-    ) -> ButtonController {
-        eic.button_debounce_pins(&[
-            self.button3.id(),
-        ]);
+    ) -> Button {
+        eic.button_debounce_pins(&[pin.id()]);
 
-        let mut b3 = self.button3.into_floating_ei(port);
-        b3.sense(eic, Sense::BOTH);
-        b3.enable_interrupt(eic);
-        ButtonController {
-            b3,
+        let mut pin = pin.into_floating_ei(port);
+        pin.sense(eic, Sense::BOTH);
+        pin.enable_interrupt(eic);
+
+        Button {
+            pin, queue
         }
     }
-}
 
-struct ButtonController {
-    b3: ExtInt12<Pc28<Interrupt<Floating>>>,
+    pub fn enable(&self, nvic: &mut NVIC, interrupt: interrupt) {
+        unsafe {
+            nvic.set_priority(interrupt, 1);
+            NVIC::unmask(interrupt);
+        }
+    }
 }
 
 struct ButtonEvent {
     pressed: bool,
 }
 
-macro_rules! isr {
-    ($Handler:ident, $($Event:expr, $Button:ident),+) => {
-        pub fn $Handler(&mut self) -> Option<ButtonEvent> {
-            $(
-                {
-                    let b = &mut self.$Button;
-                    if b.is_interrupt() {
-                        b.clear_interrupt();
-                        return Some(ButtonEvent {
-                            pressed: !b.state(),
-                        })
-                    }
+macro_rules! button_interrupt {
+    ($Button:ident, $Interrupt:ident) => {
+        #[interrupt]
+        fn $Interrupt() {
+            disable_interrupts(|_cs| unsafe {
+                let button = BUTTON.as_mut().unwrap();
+                if button.pin.is_interrupt() {
+                    button.pin.clear_interrupt();
+                    let mut q = button.queue.split().0;
+                    q.enqueue(ButtonEvent {
+                        pressed: !button.pin.state()
+                    }).ok();
                 }
-            )+
-
-            None
+            });
         }
     };
 }
 
-impl ButtonController {
-    pub fn enable(&self, nvic: &mut NVIC) {
-        unsafe {
-            nvic.set_priority(interrupt::EIC_EXTINT_12, 1);
-            NVIC::unmask(interrupt::EIC_EXTINT_12);
-        }
-    }
-
-    isr!(interrupt_extint12, Button::TopLeft, b3);
-}
-
-
+static mut BUTTON: Option<Button> = None;
 
 #[entry]
 fn main() -> ! {
@@ -212,24 +201,23 @@ fn main() -> ! {
         wheel_interrupt!(RUNNING_SYSTEM, TC4, wheel_2);
     }
 
-    let buttons = ButtonPins {
-        button3: pins.button3,
-    };
-    let button_ctrlr = buttons.init(
+    let button = Button::new(
+        pins.button3,
+        Queue::new(),
         &mut configurable_eic,
-        &mut peripherals.MCLK,
         &mut pins.port,
     );
 
     let nvic = &mut core.NVIC;
     disable_interrupts(|_| unsafe {
-        button_ctrlr.enable(nvic);
-        BUTTON_CTRLR = Some(button_ctrlr);
+        button.enable(nvic, interrupt::EIC_EXTINT_12);
+        BUTTON = Some(button);
     });
+    button_interrupt!(BUTTON, EIC_EXTINT_12);
 
     configurable_eic.finalize();
 
-    let mut consumer = unsafe { Q.split().1 };
+    let mut consumer = unsafe { BUTTON.as_mut().unwrap().queue.split().1 };
     loop {
         if let Some(event) = consumer.dequeue() {
             if !event.pressed {
@@ -243,39 +231,3 @@ fn main() -> ! {
         }
     }
 }
-
-static mut BUTTON_CTRLR: Option<ButtonController> = None;
-static mut Q: Queue<ButtonEvent, U8> = Queue(heapless::i::Queue::new());
-
-macro_rules! button_interrupt {
-    ($controller:ident, unsafe fn $func_name:ident ($cs:ident: $cstype:ty, $event:ident: ButtonEvent ) $code:block) => {
-        unsafe fn $func_name($cs: $cstype, $event: ButtonEvent) {
-            $code
-        }
-
-        macro_rules! _button_interrupt_handler {
-            ($Interrupt:ident, $Handler:ident) => {
-                #[interrupt]
-                fn $Interrupt() {
-                    disable_interrupts(|cs| unsafe {
-                        $controller.as_mut().map(|ctrlr| {
-                            if let Some(event) = ctrlr.$Handler() {
-                                $func_name(cs, event);
-                            }
-                        });
-                    });
-                }
-            };
-        }
-
-        _button_interrupt_handler!(EIC_EXTINT_12, interrupt_extint12);
-    };
-}
-
-button_interrupt!(
-    BUTTON_CTRLR,
-    unsafe fn on_button_event(_cs: &CriticalSection, event: ButtonEvent) {
-        let mut q = Q.split().0;
-        q.enqueue(event).ok();
-    }
-);
