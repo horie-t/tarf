@@ -25,9 +25,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="1.4"
-     inkscape:cx="410.66169"
-     inkscape:cy="889.27598"
+     inkscape:zoom="2.8"
+     inkscape:cx="471.65035"
+     inkscape:cy="967.93829"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -52,6 +52,62 @@
      inkscape:label="レイヤー 1"
      inkscape:groupmode="layer"
      id="layer1">
+    <rect
+       style="opacity:1;fill:#008833;fill-opacity:1;stroke:none;stroke-width:0.5;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
+       id="rect1880-3"
+       width="54.923889"
+       height="62.541073"
+       x="80.204529"
+       y="10.090353" />
+    <rect
+       style="opacity:1;fill:none;fill-opacity:1;stroke:#dfe9e8;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
+       id="rect2965-6"
+       width="2.7403274"
+       height="7.630394"
+       x="83.988441"
+       y="11.108679" />
+    <rect
+       style="opacity:1;fill:none;fill-opacity:0.94117647;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
+       id="rect2903-7-6-3-3-5"
+       width="3"
+       height="14.835565"
+       x="89.734001"
+       y="56.323662" />
+    <rect
+       style="opacity:1;fill:none;fill-opacity:0.94117647;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
+       id="rect2903-7-6-3-3"
+       width="3"
+       height="14.835565"
+       x="89.662437"
+       y="36.181152" />
+    <rect
+       style="opacity:1;fill:none;fill-opacity:0.94117647;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
+       id="rect2903-7-6-5"
+       width="3"
+       height="20.221725"
+       x="89.783363"
+       y="11.077246" />
+    <rect
+       style="opacity:1;fill:none;fill-opacity:0.94117647;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
+       id="rect2903-6-7"
+       width="3"
+       height="60.381695"
+       x="95.828865"
+       y="11.202754" />
+    <rect
+       style="opacity:1;fill:none;fill-opacity:0.94117647;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
+       id="rect2903-6"
+       width="3"
+       height="60.381695"
+       x="110.81006"
+       y="11.133588" />
+    <rect
+       style="opacity:1;fill:none;fill-opacity:0.94117647;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
+       id="rect2901-3"
+       width="6"
+       height="49.979401"
+       x="128.56343"
+       y="16.233362" />
     <rect
        style="opacity:1;fill:#008833;fill-opacity:1;stroke:none;stroke-width:0.5;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
        id="rect1880"
@@ -2709,13 +2765,6 @@
        height="4.6302085"
        x="63.428841"
        y="11.700541" />
-    <rect
-       style="opacity:1;fill:#008833;fill-opacity:1;stroke:none;stroke-width:0.5;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
-       id="rect1880-3"
-       width="54.923889"
-       height="62.541073"
-       x="80.204529"
-       y="10.090353" />
     <circle
        style="opacity:1;fill:none;fill-opacity:1;stroke:#9a916c;stroke-width:0.5;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
        id="path815-67"
