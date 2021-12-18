@@ -7,10 +7,10 @@ use cortex_m::peripheral::NVIC;
 use panic_halt as _;
 
 use wio_terminal as wio;
-use wio::entry;
+use wio::{entry, Pins};
 use wio::hal::clock::GenericClockController;
 use wio::hal::delay::Delay;
-use wio::hal::gpio::v2::{Disabled, Floating, Output, PA07, PB04, PB05, PB06, PB08, PB09, Pin, PinId, Pins, PushPull};
+use wio::hal::gpio::v2::{Disabled, Floating, Input, Output, PA07, PB04, PB05, PB06, PB08, PB09, Pin, PinId, PushPull};
 use wio::hal::timer::{Count16, TimerCounter};
 use wio::pac::{interrupt, CorePeripherals, Peripherals, TC2, TC3, TC4};
 use wio::prelude::*;
@@ -29,7 +29,7 @@ struct Wheel<S: PinId, D: PinId, T: Count16> {
 }
 
 impl<S: PinId, D: PinId, T: Count16> Wheel<S, D, T> {
-    fn new(id: u32, step_pin: Pin<S, Disabled<Floating>>, direction_pin: Pin<D, Disabled<Floating>>,
+    fn new(id: u32, step_pin: Pin<S, Input<Floating>>, direction_pin: Pin<D, Input<Floating>>,
         timer_counter: TimerCounter<T>, interrupt: interrupt) -> Wheel<S, D, T>{
             let mut wheel = Wheel {
                 id,
@@ -111,15 +111,15 @@ fn main() -> ! {
 
     let pins = Pins::new(peripherals.PORT);
         
-    let wheel_0 = Wheel::new(0, pins.pb08, pins.pb09,
+    let wheel_0 = Wheel::new(0, pins.a0_d0.into(), pins.a1_d1.into(),
         TimerCounter::tc2_(&tc2_tc3, peripherals.TC2, &mut peripherals.MCLK),
         interrupt::TC2,
     );
-    let wheel_1 = Wheel::new(1, pins.pa07, pins.pb04,
+    let wheel_1 = Wheel::new(1, pins.a2_d2.into(), pins.a3_d3.into(),
         TimerCounter::tc3_(&tc2_tc3, peripherals.TC3, &mut peripherals.MCLK),
         interrupt::TC3,
     );
-    let wheel_2 = Wheel::new(2, pins.pb05, pins.pb06,
+    let wheel_2 = Wheel::new(2, pins.a4_d4.into(), pins.a5_d5.into(),
         TimerCounter::tc4_(&tc4_tc5, peripherals.TC4, &mut peripherals.MCLK),
         interrupt::TC4,
     );
