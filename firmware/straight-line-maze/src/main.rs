@@ -14,8 +14,8 @@ use wio::{entry, Pins};
 use wio::hal::clock::GenericClockController;
 use wio::hal::delay::Delay;
 use wio::hal::common::eic;
-use wio::hal::common::eic::pin::{ExtInt12, ExternalInterrupt, Sense};
-use wio::hal::gpio::v1::{Port, Pc28};
+use wio::hal::common::eic::pin::{ExtInt10, ExternalInterrupt, Sense};
+use wio::hal::gpio::v1::{Port, Pc26};
 use wio::hal::gpio::v2::{Floating, Input, Interrupt, Output, PA07, PB04, PB05, PB06, PB08, PB09, Pin, PinId, PushPull};
 use wio::hal::timer::{Count16, TimerCounter};
 use wio::pac::{CorePeripherals, Peripherals, TC2, TC3, TC4, interrupt};
@@ -97,12 +97,12 @@ static mut RUNNING_SYSTEM: Option<RunningSystem<PB08, PB09, TC2, PA07, PB04, TC3
 
 struct Button {
     queue: Queue<ButtonEvent, U8>,
-    pin: ExtInt12<Pc28<Interrupt<Floating>>>,
+    pin: ExtInt10<Pc26<Interrupt<Floating>>>,
 }
 
 impl Button {
     pub fn new(
-        pin: Pc28<Input<Floating>>,
+        pin: Pc26<Input<Floating>>,
         queue: Queue<ButtonEvent, U8>,
         eic: &mut ConfigurableEIC,
         port: &mut Port,
@@ -192,17 +192,17 @@ fn main() -> ! {
 
     // スタートボタンの初期化
     let start_button = Button::new(
-        pins.button3,
+        pins.button1,
         Queue::new(),
         &mut configurable_eic,
         &mut pins.port,
     );
     let nvic = &mut core.NVIC;
     disable_interrupts(|_| unsafe {
-        start_button.enable(nvic, interrupt::EIC_EXTINT_12);
+        start_button.enable(nvic, interrupt::EIC_EXTINT_10);
         START_BUTTON = Some(start_button);
     });
-    button_interrupt!(START_BUTTON, EIC_EXTINT_12);
+    button_interrupt!(START_BUTTON, EIC_EXTINT_10);
 
     configurable_eic.finalize();
 
