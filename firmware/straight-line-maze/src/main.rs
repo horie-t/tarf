@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use cortex_m::interrupt::{CriticalSection, free as disable_interrupts};
+use cortex_m::interrupt::{free as disable_interrupts};
 use cortex_m::peripheral::NVIC;
 use heapless::consts::U8;
 use heapless::spsc::Queue;
@@ -18,7 +18,7 @@ use wio::hal::common::eic::pin::{ExtInt12, ExternalInterrupt, Sense};
 use wio::hal::gpio::v1::{Port, Pc28};
 use wio::hal::gpio::v2::{Floating, Input, Interrupt, Output, PA07, PB04, PB05, PB06, PB08, PB09, Pin, PinId, PushPull};
 use wio::hal::timer::{Count16, TimerCounter};
-use wio::pac::{CorePeripherals, EIC, MCLK, Peripherals, TC2, TC3, TC4, interrupt};
+use wio::pac::{CorePeripherals, Peripherals, TC2, TC3, TC4, interrupt};
 use wio::prelude::*;
 
 #[derive(Clone, Copy)]
@@ -110,7 +110,7 @@ impl Button {
         eic.button_debounce_pins(&[pin.id()]);
 
         let mut pin = pin.into_floating_ei(port);
-        pin.sense(eic, Sense::BOTH);
+        pin.sense(eic, Sense::FALL);
         pin.enable_interrupt(eic);
 
         Button {
@@ -135,20 +135,18 @@ macro_rules! button_interrupt {
         #[interrupt]
         fn $Interrupt() {
             disable_interrupts(|_cs| unsafe {
-                let button = BUTTON.as_mut().unwrap();
+                let button = $Button.as_mut().unwrap();
                 if button.pin.is_interrupt() {
                     button.pin.clear_interrupt();
                     let mut q = button.queue.split().0;
-                    q.enqueue(ButtonEvent {
-                        pressed: !button.pin.state()
-                    }).ok();
+                    q.enqueue(ButtonEvent { pressed: true }).ok();
                 }
             });
         }
     };
 }
 
-static mut BUTTON: Option<Button> = None;
+static mut START_BUTTON: Option<Button> = None;
 
 #[entry]
 fn main() -> ! {
@@ -173,24 +171,15 @@ fn main() -> ! {
     let tc4_tc5 = clocks.tc4_tc5(&gclk5).unwrap();
 
     let mut pins = Pins::new(peripherals.PORT);
-        
-    let wheel_0 = Wheel::new(0, pins.a0_d0.into(), pins.a1_d1.into(),
-        TimerCounter::tc2_(&tc2_tc3, peripherals.TC2, &mut peripherals.MCLK),
-        interrupt::TC2,
-    );
-    let wheel_1 = Wheel::new(1, pins.a2_d2.into(), pins.a3_d3.into(),
-        TimerCounter::tc3_(&tc2_tc3, peripherals.TC3, &mut peripherals.MCLK),
-        interrupt::TC3,
-    );
-    let wheel_2 = Wheel::new(2, pins.a4_d4.into(), pins.a5_d5.into(),
-        TimerCounter::tc4_(&tc4_tc5, peripherals.TC4, &mut peripherals.MCLK),
-        interrupt::TC4,
-    );
-
+    
+    // 走行装置の初期化
     let mut running_system = RunningSystem {
-        wheel_0,
-        wheel_1,
-        wheel_2,
+        wheel_0: Wheel::new(0, pins.a0_d0.into(), pins.a1_d1.into(),
+            TimerCounter::tc2_(&tc2_tc3, peripherals.TC2, &mut peripherals.MCLK), interrupt::TC2),
+        wheel_1: Wheel::new(1, pins.a2_d2.into(), pins.a3_d3.into(),
+            TimerCounter::tc3_(&tc2_tc3, peripherals.TC3, &mut peripherals.MCLK), interrupt::TC3),
+        wheel_2: Wheel::new(2, pins.a4_d4.into(), pins.a5_d5.into(),
+            TimerCounter::tc4_(&tc4_tc5, peripherals.TC4, &mut peripherals.MCLK), interrupt::TC4),
     };
     running_system.wheel_1.set_rotate_direction(WheelRotateDirection::CounterClockWise);
 
@@ -201,26 +190,26 @@ fn main() -> ! {
         wheel_interrupt!(RUNNING_SYSTEM, TC4, wheel_2);
     }
 
-    let button = Button::new(
+    // スタートボタンの初期化
+    let start_button = Button::new(
         pins.button3,
         Queue::new(),
         &mut configurable_eic,
         &mut pins.port,
     );
-
     let nvic = &mut core.NVIC;
     disable_interrupts(|_| unsafe {
-        button.enable(nvic, interrupt::EIC_EXTINT_12);
-        BUTTON = Some(button);
+        start_button.enable(nvic, interrupt::EIC_EXTINT_12);
+        START_BUTTON = Some(start_button);
     });
-    button_interrupt!(BUTTON, EIC_EXTINT_12);
+    button_interrupt!(START_BUTTON, EIC_EXTINT_12);
 
     configurable_eic.finalize();
 
-    let mut consumer = unsafe { BUTTON.as_mut().unwrap().queue.split().1 };
+    let mut consumer = unsafe { START_BUTTON.as_mut().unwrap().queue.split().1 };
     loop {
         if let Some(event) = consumer.dequeue() {
-            if !event.pressed {
+            if event.pressed {
                 unsafe {
                     let running_system = RUNNING_SYSTEM.as_mut().unwrap();
                     running_system.wheel_0.start(10_f32);
