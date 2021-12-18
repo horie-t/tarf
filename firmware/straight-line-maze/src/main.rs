@@ -8,6 +8,7 @@ use heapless::spsc::Queue;
 
 use panic_halt as _;
 
+use wio::hal::eic::ConfigurableEIC;
 use wio_terminal as wio;
 use wio::{entry, Pins};
 use wio::hal::clock::GenericClockController;
@@ -102,29 +103,24 @@ struct ButtonPins {
 impl ButtonPins {
     pub fn init(
         self,
-        eic: EIC,
-        clocks: &mut GenericClockController,
+        eic: &mut ConfigurableEIC,
         mclk: &mut MCLK,
         port: &mut Port,
     ) -> ButtonController {
-        let clk = clocks.gclk1();
-        let mut eic = eic::init_with_ulp32k(mclk, clocks.eic(&clk).unwrap(), eic);
         eic.button_debounce_pins(&[
             self.button3.id(),
         ]);
 
         let mut b3 = self.button3.into_floating_ei(port);
-        b3.sense(&mut eic, Sense::BOTH);
-        b3.enable_interrupt(&mut eic);
+        b3.sense(eic, Sense::BOTH);
+        b3.enable_interrupt(eic);
         ButtonController {
-            _eic: eic.finalize(),
             b3,
         }
     }
 }
 
 struct ButtonController {
-    _eic: eic::EIC,
     b3: ExtInt12<Pc28<Interrupt<Floating>>>,
 }
 
@@ -179,6 +175,9 @@ fn main() -> ! {
     );
     let mut delay = Delay::new(core.SYST, &mut clocks);
 
+    let clk = clocks.gclk1();
+    let mut configurable_eic = eic::init_with_ulp32k(&mut peripherals.MCLK, clocks.eic(&clk).unwrap(), peripherals.EIC);
+
     let gclk5 = clocks.get_gclk(wio::pac::gclk::pchctrl::GEN_A::GCLK5)
         .unwrap();
     let tc2_tc3 = clocks.tc2_tc3(&gclk5).unwrap();
@@ -217,8 +216,7 @@ fn main() -> ! {
         button3: pins.button3,
     };
     let button_ctrlr = buttons.init(
-        peripherals.EIC,
-        &mut clocks,
+        &mut configurable_eic,
         &mut peripherals.MCLK,
         &mut pins.port,
     );
@@ -228,6 +226,9 @@ fn main() -> ! {
         button_ctrlr.enable(nvic);
         BUTTON_CTRLR = Some(button_ctrlr);
     });
+
+    configurable_eic.finalize();
+
     let mut consumer = unsafe { Q.split().1 };
     loop {
         if let Some(event) = consumer.dequeue() {
