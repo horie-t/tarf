@@ -1,8 +1,10 @@
 #![no_std]
 #![no_main]
 
-use cortex_m::interrupt::{free as disable_interrupts};
+use cortex_m::interrupt::{CriticalSection, free as disable_interrupts};
 use cortex_m::peripheral::NVIC;
+use heapless::consts::U8;
+use heapless::spsc::Queue;
 
 use panic_halt as _;
 
@@ -10,9 +12,12 @@ use wio_terminal as wio;
 use wio::{entry, Pins};
 use wio::hal::clock::GenericClockController;
 use wio::hal::delay::Delay;
-use wio::hal::gpio::v2::{Disabled, Floating, Input, Output, PA07, PB04, PB05, PB06, PB08, PB09, Pin, PinId, PushPull};
+use wio::hal::common::eic;
+use wio::hal::common::eic::pin::{ExtInt12, ExternalInterrupt, Sense};
+use wio::hal::gpio::v1::{Port, Pc28};
+use wio::hal::gpio::v2::{Floating, Input, Interrupt, Output, PA07, PB04, PB05, PB06, PB08, PB09, Pin, PinId, PushPull};
 use wio::hal::timer::{Count16, TimerCounter};
-use wio::pac::{interrupt, CorePeripherals, Peripherals, TC2, TC3, TC4};
+use wio::pac::{CorePeripherals, EIC, MCLK, Peripherals, TC2, TC3, TC4, interrupt};
 use wio::prelude::*;
 
 #[derive(Clone, Copy)]
@@ -64,7 +69,6 @@ impl<S: PinId, D: PinId, T: Count16> Wheel<S, D, T> {
     fn start(&mut self, rpm: f32) {
         let pulse_hz = (((2_f32 * 200_f32) / 60_f32 * rpm) as u32).hz();
         self.timer_counter.start(pulse_hz);
-        // self.timer_counter.start(20.ms());
         self.timer_counter.enable_interrupt();
     }
 }
@@ -90,11 +94,82 @@ struct RunningSystem<S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1
 
 static mut RUNNING_SYSTEM: Option<RunningSystem<PB08, PB09, TC2, PA07, PB04, TC3, PB05, PB06, TC4>> = None;
 
+struct ButtonPins {
+    /// button3 pin
+    pub button3: Pc28<Input<Floating>>,
+}
+
+impl ButtonPins {
+    pub fn init(
+        self,
+        eic: EIC,
+        clocks: &mut GenericClockController,
+        mclk: &mut MCLK,
+        port: &mut Port,
+    ) -> ButtonController {
+        let clk = clocks.gclk1();
+        let mut eic = eic::init_with_ulp32k(mclk, clocks.eic(&clk).unwrap(), eic);
+        eic.button_debounce_pins(&[
+            self.button3.id(),
+        ]);
+
+        let mut b3 = self.button3.into_floating_ei(port);
+        b3.sense(&mut eic, Sense::BOTH);
+        b3.enable_interrupt(&mut eic);
+        ButtonController {
+            _eic: eic.finalize(),
+            b3,
+        }
+    }
+}
+
+struct ButtonController {
+    _eic: eic::EIC,
+    b3: ExtInt12<Pc28<Interrupt<Floating>>>,
+}
+
+struct ButtonEvent {
+    pressed: bool,
+}
+
+macro_rules! isr {
+    ($Handler:ident, $($Event:expr, $Button:ident),+) => {
+        pub fn $Handler(&mut self) -> Option<ButtonEvent> {
+            $(
+                {
+                    let b = &mut self.$Button;
+                    if b.is_interrupt() {
+                        b.clear_interrupt();
+                        return Some(ButtonEvent {
+                            pressed: !b.state(),
+                        })
+                    }
+                }
+            )+
+
+            None
+        }
+    };
+}
+
+impl ButtonController {
+    pub fn enable(&self, nvic: &mut NVIC) {
+        unsafe {
+            nvic.set_priority(interrupt::EIC_EXTINT_12, 1);
+            NVIC::unmask(interrupt::EIC_EXTINT_12);
+        }
+    }
+
+    isr!(interrupt_extint12, Button::TopLeft, b3);
+}
+
+
+
 #[entry]
 fn main() -> ! {
     // 初期化処理
     let mut peripherals = Peripherals::take().unwrap();
-    let core = CorePeripherals::take().unwrap();
+    let mut core = CorePeripherals::take().unwrap();
     let mut clocks = GenericClockController::with_external_32kosc(
         peripherals.GCLK,
         &mut peripherals.MCLK,
@@ -109,7 +184,7 @@ fn main() -> ! {
     let tc2_tc3 = clocks.tc2_tc3(&gclk5).unwrap();
     let tc4_tc5 = clocks.tc4_tc5(&gclk5).unwrap();
 
-    let pins = Pins::new(peripherals.PORT);
+    let mut pins = Pins::new(peripherals.PORT);
         
     let wheel_0 = Wheel::new(0, pins.a0_d0.into(), pins.a1_d1.into(),
         TimerCounter::tc2_(&tc2_tc3, peripherals.TC2, &mut peripherals.MCLK),
@@ -129,13 +204,7 @@ fn main() -> ! {
         wheel_1,
         wheel_2,
     };
-
-    running_system.wheel_0.start(10_f32);
-
     running_system.wheel_1.set_rotate_direction(WheelRotateDirection::CounterClockWise);
-    running_system.wheel_1.start(20_f32);
-
-    running_system.wheel_2.start(10_f32);
 
     unsafe {
         RUNNING_SYSTEM = Some(running_system);
@@ -144,6 +213,68 @@ fn main() -> ! {
         wheel_interrupt!(RUNNING_SYSTEM, TC4, wheel_2);
     }
 
+    let buttons = ButtonPins {
+        button3: pins.button3,
+    };
+    let button_ctrlr = buttons.init(
+        peripherals.EIC,
+        &mut clocks,
+        &mut peripherals.MCLK,
+        &mut pins.port,
+    );
+
+    let nvic = &mut core.NVIC;
+    disable_interrupts(|_| unsafe {
+        button_ctrlr.enable(nvic);
+        BUTTON_CTRLR = Some(button_ctrlr);
+    });
+    let mut consumer = unsafe { Q.split().1 };
     loop {
+        if let Some(event) = consumer.dequeue() {
+            if !event.pressed {
+                unsafe {
+                    let running_system = RUNNING_SYSTEM.as_mut().unwrap();
+                    running_system.wheel_0.start(10_f32);
+                    running_system.wheel_1.start(20_f32);
+                    running_system.wheel_2.start(10_f32);
+                }
+            }
+        }
     }
 }
+
+static mut BUTTON_CTRLR: Option<ButtonController> = None;
+static mut Q: Queue<ButtonEvent, U8> = Queue(heapless::i::Queue::new());
+
+macro_rules! button_interrupt {
+    ($controller:ident, unsafe fn $func_name:ident ($cs:ident: $cstype:ty, $event:ident: ButtonEvent ) $code:block) => {
+        unsafe fn $func_name($cs: $cstype, $event: ButtonEvent) {
+            $code
+        }
+
+        macro_rules! _button_interrupt_handler {
+            ($Interrupt:ident, $Handler:ident) => {
+                #[interrupt]
+                fn $Interrupt() {
+                    disable_interrupts(|cs| unsafe {
+                        $controller.as_mut().map(|ctrlr| {
+                            if let Some(event) = ctrlr.$Handler() {
+                                $func_name(cs, event);
+                            }
+                        });
+                    });
+                }
+            };
+        }
+
+        _button_interrupt_handler!(EIC_EXTINT_12, interrupt_extint12);
+    };
+}
+
+button_interrupt!(
+    BUTTON_CTRLR,
+    unsafe fn on_button_event(_cs: &CriticalSection, event: ButtonEvent) {
+        let mut q = Q.split().0;
+        q.enqueue(event).ok();
+    }
+);
