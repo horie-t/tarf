@@ -81,6 +81,10 @@ impl<S: PinId, D: PinId, T: Count16> Wheel<S, D, T> {
         self.timer_counter.start(pulse_hz);
         self.timer_counter.enable_interrupt();
     }
+
+    fn stop(&mut self) {
+        self.timer_counter.disable_interrupt();
+    }
 }
 
 macro_rules! wheel_interrupt {
@@ -448,6 +452,7 @@ fn main() -> ! {
             TOF_SENSOR_CTRLR = Some(interrupt_controller);
         });
     }
+    let mut consumer = unsafe { EVENT_QUEUE.split().1 };
 
     // 初期化の後処理
     configurable_eic.finalize();
@@ -460,6 +465,16 @@ fn main() -> ! {
                     running_system.wheel_0.start(10_f32);
                     running_system.wheel_1.start(20_f32);
                     running_system.wheel_2.start(10_f32);
+                }
+            }
+        }
+        if let Some(interrupt_event) = consumer.dequeue() {
+            if interrupt_event.id == 4 && interrupt_event.distance < 50 {
+                unsafe {
+                    let running_system = RUNNING_SYSTEM.as_mut().unwrap();
+                    running_system.wheel_0.stop();
+                    running_system.wheel_1.stop();
+                    running_system.wheel_2.stop();
                 }
             }
         }
