@@ -168,36 +168,26 @@ struct SensorEvent {
     distance: u16,
 }
 
+type SensorI2C = I2CMaster3<Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>>;
+
 struct TofSensors<'a> {
-    sensor1_gpio1: Pa4<Input<Floating>>,
-    sensor1_i2c: VL53L0x<I2cSlave<
-                    'a, Xca9548a<I2CMaster3<Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>>>,
-                    I2CMaster3<Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>,Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>>>>,
+    sensor0_gpio1: Pa4<Input<Floating>>,
+    sensor0_i2c: VL53L0x<I2cSlave<'a, Xca9548a<SensorI2C>, SensorI2C>>,
 
-    sensor2_gpio1: Pb7<Input<Floating>>,
-    sensor2_i2c: VL53L0x<I2cSlave<
-                    'a, Xca9548a<I2CMaster3<Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>>>,
-                    I2CMaster3<Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>,Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>>>>,
+    sensor1_gpio1: Pb7<Input<Floating>>,
+    sensor1_i2c: VL53L0x<I2cSlave<'a, Xca9548a<SensorI2C>, SensorI2C>>,
 
-    sensor3_gpio1: Pa6<Input<Floating>>,
-    sensor3_i2c: VL53L0x<I2cSlave<
-                    'a, Xca9548a<I2CMaster3<Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>>>,
-                    I2CMaster3<Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>,Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>>>>,
+    sensor2_gpio1: Pa6<Input<Floating>>,
+    sensor2_i2c: VL53L0x<I2cSlave<'a, Xca9548a<SensorI2C>, SensorI2C>>,
 
-    sensor4_gpio1: Pb14<Input<Floating>>,
-    sensor4_i2c: VL53L0x<I2cSlave<
-                    'a, Xca9548a<I2CMaster3<Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>>>,
-                    I2CMaster3<Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>,Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>>>>,
+    sensor3_gpio1: Pb14<Input<Floating>>,
+    sensor3_i2c: VL53L0x<I2cSlave<'a, Xca9548a<SensorI2C>, SensorI2C>>,
 
-    sensor5_gpio1: Pb12<Input<Floating>>,
-    sensor5_i2c: VL53L0x<I2cSlave<
-                    'a, Xca9548a<I2CMaster3<Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>>>,
-                    I2CMaster3<Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>,Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>>>>,
+    sensor4_gpio1: Pb12<Input<Floating>>,
+    sensor4_i2c: VL53L0x<I2cSlave<'a, Xca9548a<SensorI2C>, SensorI2C>>,
 
-    sensor6_gpio1: Pb13<Input<Floating>>,
-    sensor6_i2c: VL53L0x<I2cSlave<
-                    'a, Xca9548a<I2CMaster3<Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>>>,
-                    I2CMaster3<Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>,Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>>>>,
+    sensor5_gpio1: Pb13<Input<Floating>>,
+    sensor5_i2c: VL53L0x<I2cSlave<'a, Xca9548a<SensorI2C>, SensorI2C>>,
 }
 
 impl<'a> TofSensors<'a> {
@@ -206,6 +196,11 @@ impl<'a> TofSensors<'a> {
         eic: &mut ConfigurableEIC,
         port: &mut Port,
     ) -> TofSensorController<'a> {
+        let mut sensor0_gpio1 = self.sensor0_gpio1.into_floating_ei(port);
+        sensor0_gpio1.sense(eic, Sense::FALL);
+        sensor0_gpio1.enable_interrupt(eic);
+        self.sensor0_i2c.start_continuous(0).unwrap();
+
         let mut sensor1_gpio1 = self.sensor1_gpio1.into_floating_ei(port);
         sensor1_gpio1.sense(eic, Sense::FALL);
         sensor1_gpio1.enable_interrupt(eic);
@@ -231,12 +226,9 @@ impl<'a> TofSensors<'a> {
         sensor5_gpio1.enable_interrupt(eic);
         self.sensor5_i2c.start_continuous(0).unwrap();
 
-        let mut sensor6_gpio1 = self.sensor6_gpio1.into_floating_ei(port);
-        sensor6_gpio1.sense(eic, Sense::FALL);
-        sensor6_gpio1.enable_interrupt(eic);
-        self.sensor6_i2c.start_continuous(0).unwrap();
-
         TofSensorController {
+            sensor0_gpio1,
+            sensor0_i2c: self.sensor0_i2c,
             sensor1_gpio1,
             sensor1_i2c: self.sensor1_i2c,
             sensor2_gpio1,
@@ -247,37 +239,28 @@ impl<'a> TofSensors<'a> {
             sensor4_i2c: self.sensor4_i2c,
             sensor5_gpio1,
             sensor5_i2c: self.sensor5_i2c,
-            sensor6_gpio1,
-            sensor6_i2c: self.sensor6_i2c,
         }
     }
 }
 
 struct TofSensorController<'a> {
-    sensor1_gpio1: ExtInt4<Pa4<Interrupt<Floating>>>,
-    sensor1_i2c: VL53L0x<I2cSlave<
-                    'a, Xca9548a<I2CMaster3<Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>>>,
-                    I2CMaster3<Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>,Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>>>>,
-    sensor2_gpio1: ExtInt7<Pb7<Interrupt<Floating>>>,
-    sensor2_i2c: VL53L0x<I2cSlave<
-                    'a, Xca9548a<I2CMaster3<Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>>>,
-                    I2CMaster3<Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>,Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>>>>,
-    sensor3_gpio1: ExtInt6<Pa6<Interrupt<Floating>>>,
-    sensor3_i2c: VL53L0x<I2cSlave<
-                    'a, Xca9548a<I2CMaster3<Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>>>,
-                    I2CMaster3<Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>,Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>>>>,
-    sensor4_gpio1: ExtInt14<Pb14<Interrupt<Floating>>>,
-    sensor4_i2c: VL53L0x<I2cSlave<
-                    'a, Xca9548a<I2CMaster3<Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>>>,
-                    I2CMaster3<Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>,Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>>>>,
-    sensor5_gpio1: ExtInt12<Pb12<Interrupt<Floating>>>,
-    sensor5_i2c: VL53L0x<I2cSlave<
-                    'a, Xca9548a<I2CMaster3<Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>>>,
-                    I2CMaster3<Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>,Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>>>>,
-    sensor6_gpio1: ExtInt13<Pb13<Interrupt<Floating>>>,
-    sensor6_i2c: VL53L0x<I2cSlave<
-                    'a, Xca9548a<I2CMaster3<Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>, Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>>>,
-                    I2CMaster3<Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>,Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>>>>,
+    sensor0_gpio1: ExtInt4<Pa4<Interrupt<Floating>>>,
+    sensor0_i2c: VL53L0x<I2cSlave<'a, Xca9548a<SensorI2C>, SensorI2C>>,
+
+    sensor1_gpio1: ExtInt7<Pb7<Interrupt<Floating>>>,
+    sensor1_i2c: VL53L0x<I2cSlave<'a, Xca9548a<SensorI2C>, SensorI2C>>,
+
+    sensor2_gpio1: ExtInt6<Pa6<Interrupt<Floating>>>,
+    sensor2_i2c: VL53L0x<I2cSlave<'a, Xca9548a<SensorI2C>, SensorI2C>>,
+
+    sensor3_gpio1: ExtInt14<Pb14<Interrupt<Floating>>>,
+    sensor3_i2c: VL53L0x<I2cSlave<'a, Xca9548a<SensorI2C>, SensorI2C>>,
+
+    sensor4_gpio1: ExtInt12<Pb12<Interrupt<Floating>>>,
+    sensor4_i2c: VL53L0x<I2cSlave<'a, Xca9548a<SensorI2C>, SensorI2C>>,
+
+    sensor5_gpio1: ExtInt13<Pb13<Interrupt<Floating>>>,
+    sensor5_i2c: VL53L0x<I2cSlave<'a, Xca9548a<SensorI2C>, SensorI2C>>,
 }
 
 macro_rules! isr {
@@ -319,22 +302,15 @@ impl<'a> TofSensorController<'a> {
         }
     }
 
-    isr!(interrupt_extint4, SensorEvent, sensor1_gpio1, sensor1_i2c, 1u16);
-    isr!(interrupt_extint7, SensorEvent, sensor2_gpio1, sensor2_i2c, 2u16);
-    isr!(interrupt_extint6, SensorEvent, sensor3_gpio1, sensor3_i2c, 3u16);
-    isr!(interrupt_extint14, SensorEvent, sensor4_gpio1, sensor4_i2c, 4u16);
-    isr!(interrupt_extint12, SensorEvent, sensor5_gpio1, sensor5_i2c, 5u16);
-    isr!(interrupt_extint13, SensorEvent, sensor6_gpio1, sensor6_i2c, 6u16);
+    isr!(interrupt_extint4, SensorEvent, sensor0_gpio1, sensor0_i2c, 1u16);
+    isr!(interrupt_extint7, SensorEvent, sensor1_gpio1, sensor1_i2c, 2u16);
+    isr!(interrupt_extint6, SensorEvent, sensor2_gpio1, sensor2_i2c, 3u16);
+    isr!(interrupt_extint14, SensorEvent, sensor3_gpio1, sensor3_i2c, 4u16);
+    isr!(interrupt_extint12, SensorEvent, sensor4_gpio1, sensor4_i2c, 5u16);
+    isr!(interrupt_extint13, SensorEvent, sensor5_gpio1, sensor5_i2c, 6u16);
 }
 
-static mut I2C_SWITCH: Option<
-    Xca9548a<
-        I2CMaster3<
-            Pad<SERCOM3, Pad0, gpio::v1::Pin<PA17, Alternate<D>>>,
-            Pad<SERCOM3, Pad1, gpio::v1::Pin<PA16, Alternate<D>>>,
-        >,
-    >,
-> = None;
+static mut I2C_SWITCH: Option<Xca9548a<SensorI2C>> = None;
 static mut TOF_SENSOR_CTRLR: Option<TofSensorController> = None;
 static mut EVENT_QUEUE: Queue<SensorEvent, U16> = Queue(heapless::i::Queue::new());
 
@@ -449,18 +425,18 @@ fn main() -> ! {
         let i2c_ports = I2C_SWITCH.as_mut().unwrap().split();
 
         let interrupt_pins = TofSensors {
-            sensor1_gpio1: pins.a6_d6,
-            sensor1_i2c: VL53L0x::new(i2c_ports.i2c0).unwrap(),
-            sensor2_gpio1: pins.a7_d7,
-            sensor2_i2c: VL53L0x::new(i2c_ports.i2c1).unwrap(),
-            sensor3_gpio1: pins.a8_d8,
-            sensor3_i2c: VL53L0x::new(i2c_ports.i2c2).unwrap(),
-            sensor4_gpio1: pins.gpclk0,
-            sensor4_i2c: VL53L0x::new(i2c_ports.i2c3).unwrap(),
-            sensor5_gpio1: pins.gpclk1,
-            sensor5_i2c: VL53L0x::new(i2c_ports.i2c4).unwrap(),
-            sensor6_gpio1: pins.gpclk2,
-            sensor6_i2c: VL53L0x::new(i2c_ports.i2c5).unwrap(),
+            sensor0_gpio1: pins.a6_d6,
+            sensor0_i2c: VL53L0x::new(i2c_ports.i2c0).unwrap(),
+            sensor1_gpio1: pins.a7_d7,
+            sensor1_i2c: VL53L0x::new(i2c_ports.i2c1).unwrap(),
+            sensor2_gpio1: pins.a8_d8,
+            sensor2_i2c: VL53L0x::new(i2c_ports.i2c2).unwrap(),
+            sensor3_gpio1: pins.gpclk0,
+            sensor3_i2c: VL53L0x::new(i2c_ports.i2c3).unwrap(),
+            sensor4_gpio1: pins.gpclk1,
+            sensor4_i2c: VL53L0x::new(i2c_ports.i2c4).unwrap(),
+            sensor5_gpio1: pins.gpclk2,
+            sensor5_i2c: VL53L0x::new(i2c_ports.i2c5).unwrap(),
         };
         let interrupt_controller = interrupt_pins.init(
             &mut configurable_eic,
