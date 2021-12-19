@@ -2,13 +2,7 @@
 
 マイクロ・マウスを制作するプロジェクトです。
 
-https://user-images.githubusercontent.com/10256609/137706155-5c6c29f7-b0da-4c39-ac3d-75bc74e54c84.mp4
-
-
-
 https://user-images.githubusercontent.com/10256609/146671191-d4141ed7-b348-41c7-b9aa-39eaede043df.mp4
-
-
 
 Tarfは以下の特徴を持ちます。
 
