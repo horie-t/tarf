@@ -247,21 +247,6 @@ impl<'a> TofSensors<'a> {
         sensor5_gpio1.enable_interrupt(eic);
         sensor5_i2c.start_continuous(0).unwrap();
 
-        unsafe {
-            nvic.set_priority(interrupt::EIC_EXTINT_4, 1);
-            NVIC::unmask(interrupt::EIC_EXTINT_4);
-            nvic.set_priority(interrupt::EIC_EXTINT_7, 1);
-            NVIC::unmask(interrupt::EIC_EXTINT_7);
-            nvic.set_priority(interrupt::EIC_EXTINT_6, 1);
-            NVIC::unmask(interrupt::EIC_EXTINT_6);
-            nvic.set_priority(interrupt::EIC_EXTINT_14, 1);
-            NVIC::unmask(interrupt::EIC_EXTINT_14);
-            nvic.set_priority(interrupt::EIC_EXTINT_12, 1);
-            NVIC::unmask(interrupt::EIC_EXTINT_12);
-            nvic.set_priority(interrupt::EIC_EXTINT_13, 1);
-            NVIC::unmask(interrupt::EIC_EXTINT_13);
-        }
-
         TofSensors {
             sensor0_gpio1,
             sensor0_i2c,
@@ -275,6 +260,24 @@ impl<'a> TofSensors<'a> {
             sensor4_i2c,
             sensor5_gpio1,
             sensor5_i2c,
+        }
+    }
+
+    pub fn enable(&self, nvic: &mut NVIC, interrupt0: interrupt, interrupt1: interrupt, interrupt2: interrupt,
+            interrupt3: interrupt, interrupt4: interrupt, interrupt5: interrupt) {
+        unsafe {
+            nvic.set_priority(interrupt0, 1);
+            NVIC::unmask(interrupt0);
+            nvic.set_priority(interrupt1, 1);
+            NVIC::unmask(interrupt1);
+            nvic.set_priority(interrupt2, 1);
+            NVIC::unmask(interrupt2);
+            nvic.set_priority(interrupt3, 1);
+            NVIC::unmask(interrupt3);
+            nvic.set_priority(interrupt4, 1);
+            NVIC::unmask(interrupt4);
+            nvic.set_priority(interrupt5, 1);
+            NVIC::unmask(interrupt5);
         }
     }
 }
@@ -319,17 +322,17 @@ fn main() -> ! {
 
     let gclk0 = &clocks.gclk0();
     let gclk1 = clocks.gclk1();
-    let mut configurable_eic = eic::init_with_ulp32k(&mut peripherals.MCLK, clocks.eic(&gclk1).unwrap(), peripherals.EIC);
-
-    let gclk5 = clocks.get_gclk(wio::pac::gclk::pchctrl::GEN_A::GCLK5)
-        .unwrap();
+    let gclk5 = clocks.get_gclk(wio::pac::gclk::pchctrl::GEN_A::GCLK5).unwrap();
     let tc2_tc3 = clocks.tc2_tc3(&gclk5).unwrap();
     let tc4_tc5 = clocks.tc4_tc5(&gclk5).unwrap();
+
+    let mut configurable_eic = eic::init_with_ulp32k(&mut peripherals.MCLK, clocks.eic(&gclk1).unwrap(), peripherals.EIC);
+    let nvic = &mut core.NVIC;
 
     let mut pins = Pins::new(peripherals.PORT);
     
     // 走行装置の初期化
-    let mut running_system = RunningSystem {
+    let running_system = RunningSystem {
         wheel_0: Wheel::new(0, pins.a0_d0.into(), pins.a1_d1.into(),
             TimerCounter::tc2_(&tc2_tc3, peripherals.TC2, &mut peripherals.MCLK), interrupt::TC2),
         wheel_1: Wheel::new(1, pins.a2_d2.into(), pins.a3_d3.into(),
@@ -337,14 +340,11 @@ fn main() -> ! {
         wheel_2: Wheel::new(2, pins.a4_d4.into(), pins.a5_d5.into(),
             TimerCounter::tc4_(&tc4_tc5, peripherals.TC4, &mut peripherals.MCLK), interrupt::TC4),
     };
-    running_system.wheel_1.set_rotate_direction(WheelRotateDirection::CounterClockWise);
 
-    unsafe {
-        RUNNING_SYSTEM = Some(running_system);
-        wheel_interrupt!(RUNNING_SYSTEM, TC2, wheel_0);
-        wheel_interrupt!(RUNNING_SYSTEM, TC3, wheel_1);
-        wheel_interrupt!(RUNNING_SYSTEM, TC4, wheel_2);
-    }
+    unsafe { RUNNING_SYSTEM = Some(running_system); }
+    wheel_interrupt!(RUNNING_SYSTEM, TC2, wheel_0);
+    wheel_interrupt!(RUNNING_SYSTEM, TC3, wheel_1);
+    wheel_interrupt!(RUNNING_SYSTEM, TC4, wheel_2);
 
     // スタートボタンの初期化
     let start_button = Button::new(
@@ -353,11 +353,10 @@ fn main() -> ! {
         &mut configurable_eic,
         &mut pins.port,
     );
-    let nvic = &mut core.NVIC;
-    disable_interrupts(|_| unsafe {
+    disable_interrupts(|_| {
         start_button.enable(nvic, interrupt::EIC_EXTINT_10);
-        START_BUTTON = Some(start_button);
     });
+    unsafe { START_BUTTON = Some(start_button); }
     button_interrupt!(START_BUTTON, EIC_EXTINT_10);
     let mut start_event_queue = unsafe { START_BUTTON.as_mut().unwrap().queue.split().1 };
 
@@ -391,15 +390,18 @@ fn main() -> ! {
             &mut pins.port,
             nvic,
         );
-
+        disable_interrupts(|_| {
+            tof_sensors.enable(nvic, interrupt::EIC_EXTINT_4, interrupt::EIC_EXTINT_7, interrupt::EIC_EXTINT_6,
+                interrupt::EIC_EXTINT_14, interrupt::EIC_EXTINT_12, interrupt::EIC_EXTINT_13);
+        });
         TOF_SENSORS = Some(tof_sensors);
-        tof_interrupt!(TOF_SENSORS, sensor0_gpio1, sensor0_i2c, 0u16, EIC_EXTINT_4);
-        tof_interrupt!(TOF_SENSORS, sensor1_gpio1, sensor1_i2c, 1u16, EIC_EXTINT_7);
-        tof_interrupt!(TOF_SENSORS, sensor2_gpio1, sensor2_i2c, 2u16, EIC_EXTINT_6);
-        tof_interrupt!(TOF_SENSORS, sensor3_gpio1, sensor3_i2c, 3u16, EIC_EXTINT_14);
-        tof_interrupt!(TOF_SENSORS, sensor4_gpio1, sensor4_i2c, 4u16, EIC_EXTINT_12);
-        tof_interrupt!(TOF_SENSORS, sensor5_gpio1, sensor5_i2c, 5u16, EIC_EXTINT_13);
     }
+    tof_interrupt!(TOF_SENSORS, sensor0_gpio1, sensor0_i2c, 0u16, EIC_EXTINT_4);
+    tof_interrupt!(TOF_SENSORS, sensor1_gpio1, sensor1_i2c, 1u16, EIC_EXTINT_7);
+    tof_interrupt!(TOF_SENSORS, sensor2_gpio1, sensor2_i2c, 2u16, EIC_EXTINT_6);
+    tof_interrupt!(TOF_SENSORS, sensor3_gpio1, sensor3_i2c, 3u16, EIC_EXTINT_14);
+    tof_interrupt!(TOF_SENSORS, sensor4_gpio1, sensor4_i2c, 4u16, EIC_EXTINT_12);
+    tof_interrupt!(TOF_SENSORS, sensor5_gpio1, sensor5_i2c, 5u16, EIC_EXTINT_13);
     let mut consumer = unsafe { EVENT_QUEUE.split().1 };
 
     // 初期化の後処理
@@ -410,6 +412,7 @@ fn main() -> ! {
             if event.pressed {
                 unsafe {
                     let running_system = RUNNING_SYSTEM.as_mut().unwrap();
+                    running_system.wheel_1.set_rotate_direction(WheelRotateDirection::CounterClockWise);
                     running_system.wheel_0.start(10_f32);
                     running_system.wheel_1.start(20_f32);
                     running_system.wheel_2.start(10_f32);
