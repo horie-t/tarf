@@ -302,12 +302,12 @@ impl<'a> TofSensorController<'a> {
         }
     }
 
-    isr!(interrupt_extint4, SensorEvent, sensor0_gpio1, sensor0_i2c, 1u16);
-    isr!(interrupt_extint7, SensorEvent, sensor1_gpio1, sensor1_i2c, 2u16);
-    isr!(interrupt_extint6, SensorEvent, sensor2_gpio1, sensor2_i2c, 3u16);
-    isr!(interrupt_extint14, SensorEvent, sensor3_gpio1, sensor3_i2c, 4u16);
-    isr!(interrupt_extint12, SensorEvent, sensor4_gpio1, sensor4_i2c, 5u16);
-    isr!(interrupt_extint13, SensorEvent, sensor5_gpio1, sensor5_i2c, 6u16);
+    isr!(interrupt_extint4, SensorEvent, sensor0_gpio1, sensor0_i2c, 0u16);
+    isr!(interrupt_extint7, SensorEvent, sensor1_gpio1, sensor1_i2c, 1u16);
+    isr!(interrupt_extint6, SensorEvent, sensor2_gpio1, sensor2_i2c, 2u16);
+    isr!(interrupt_extint14, SensorEvent, sensor3_gpio1, sensor3_i2c, 3u16);
+    isr!(interrupt_extint12, SensorEvent, sensor4_gpio1, sensor4_i2c, 4u16);
+    isr!(interrupt_extint13, SensorEvent, sensor5_gpio1, sensor5_i2c, 5u16);
 }
 
 static mut I2C_SWITCH: Option<Xca9548a<SensorI2C>> = None;
@@ -408,7 +408,7 @@ fn main() -> ! {
         START_BUTTON = Some(start_button);
     });
     button_interrupt!(START_BUTTON, EIC_EXTINT_10);
-    let mut consumer = unsafe { START_BUTTON.as_mut().unwrap().queue.split().1 };
+    let mut start_event_queue = unsafe { START_BUTTON.as_mut().unwrap().queue.split().1 };
 
     // センサの初期化
     let i2c: I2CMaster3<Sercom3Pad0<Pa17<PfD>>, Sercom3Pad1<Pa16<PfD>>> = I2CMaster3::new(
@@ -453,7 +453,7 @@ fn main() -> ! {
     configurable_eic.finalize();
 
     loop {
-        if let Some(event) = consumer.dequeue() {
+        if let Some(event) = start_event_queue.dequeue() {
             if event.pressed {
                 unsafe {
                     let running_system = RUNNING_SYSTEM.as_mut().unwrap();
