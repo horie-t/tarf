@@ -80,7 +80,8 @@ Firmware
 | 14       | [TOF 距離センサ](./firmware/tof-sensor/)を接続する。                                |
 | 15       | [LCDに文字](./firmware/lcd-display/)を表示する。                                    |
 | 16       | [TOF 距離センサを6つ](./firmware/tof-sensor-hub-6/)接続する。                       |
-| 17       | [TOF 距離センサで連続測定モード](./firmware/tof-sensor-interrupt/)で測定する。          |
+| 17       | [TOF 距離センサで連続測定モード](./firmware/tof-sensor-interrupt/)で測定する。      |
+| 18       | [2マスの直線だけの迷路](./firmware/straight-line-maze/)を走行する。                 |
 
 Body
 
@@ -90,8 +91,8 @@ Body
 | 2        | [ステッピングモータを固定の向きを変更](./cad/core1_3_motor2)                        |
 | 3        | [ステッピングモータとWio Terminal部分との接続部を追加](./cad/core1_3_motor3)        |
 | 4        | [Wio Terminalとバッテリーの収納部](./cad/core2)                                     |
-| 5        | [オムニホイールのハブを作成](./cad/wheel_hub)                                     　|
-| 6        | [TOF距離センサを搭載](./cad/core1_motor_sensor_4)                                 　|
+| 5        | [オムニホイールのハブを作成](./cad/wheel_hub)                                       |
+| 6        | [TOF距離センサを搭載](./cad/core1_motor_sensor_4)                                   |
 | 7        | [Wio Terminalとバッテリーの収納部にI2Cハブを搭載](./cad/core2_3)                    |
 
 
