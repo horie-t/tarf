@@ -16,6 +16,7 @@ use panic_halt as _;
 
 use nalgebra as na;
 use na::{Matrix3, Vector3, matrix, vector};
+use na::base::SVector;
 
 use wio::hal::eic::ConfigurableEIC;
 use wio_terminal as wio;
@@ -99,7 +100,11 @@ impl<S: PinId, D: PinId, T: Count16> Wheel<S, D, T> {
     }
 
     fn start_with_speed(&mut self, speed_mm_per_sec: f32) {
-        self.start_with_rps(speed_mm_per_sec / (2.0_f32 * PI * self.radius));
+        if -0.1_f32< speed_mm_per_sec && speed_mm_per_sec < 0.1 {
+            self.stop();
+        } else {
+            self.start_with_rps(speed_mm_per_sec / (2.0_f32 * PI * self.radius));
+        }
     }
 
     fn stop(&mut self) {
@@ -115,9 +120,20 @@ macro_rules! wheel_interrupt {
                 let running_system = $RunningSystem.as_mut().unwrap();
                 running_system.$Wheel.step();
                 running_system.$Wheel.timer_counter.wait().unwrap();
+
+                let mut q = WHEEL_MOVED_EVENT_QUEUE.split().0;
+                q.enqueue(WheelMovedEvent {
+                    id: running_system.$Wheel.id,
+                    distance: (2.0_f32 * PI * running_system.$Wheel.radius) / (2.0_f32 * 200.0_f32),
+                }).ok();
             });
         }
     };
+}
+
+struct WheelMovedEvent {
+    id: u32,
+    distance: f32,
 }
 
 struct RunningSystem<S0: PinId, D0: PinId, T0: Count16, 
@@ -125,18 +141,15 @@ struct RunningSystem<S0: PinId, D0: PinId, T0: Count16,
     wheel_0: Wheel<S0, D0, T0>,
     wheel_1: Wheel<S1, D1, T1>,
     wheel_2: Wheel<S2, D2, T2>,
+    mat_for_wheel_v: Matrix3<f32>,
+    mat_for_odometry: Matrix3<f32>,
 }
 
 impl <S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1: Count16, S2: PinId, D2: PinId, T2: Count16> RunningSystem<S0, D0, T0, S1, D1, T1, S2, D2, T2> {
     /// * `v` - 移動ベクトル。ロボット座標系。zは回転(rad/sec)を表す。
     fn run(&mut self, v: Vector3<f32>) {
         // TODO: 車体中心から車輪までの距離を測定する。
-        let mat: Matrix3<f32> = matrix![
-              0.5_f32, - 3.0_f32.sqrt() / 2.0_f32, 0.0_f32;
-            - 1.0_f32,   0.0_f32                 , 0.0_f32;
-              0.5_f32,   3.0_f32.sqrt() / 2.0_f32, 0.0_f32;
-        ];
-        let wheels_v = mat * v;
+        let wheels_v = self.mat_for_wheel_v * v;
         self.wheel_0.start_with_speed(wheels_v.x);
         self.wheel_1.start_with_speed(wheels_v.y);
         self.wheel_2.start_with_speed(wheels_v.z);
@@ -147,8 +160,15 @@ impl <S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1: Count16, S2: 
         self.wheel_1.stop();
         self.wheel_2.stop();
     }
+
+    fn wheel_step_to_vec(&self, moved: WheelMovedEvent) -> Vector3<f32> {
+        let mut array = [0.0f32, 0.0f32, 0.0f32];
+        array[moved.id as usize] = moved.distance;
+        self.mat_for_odometry * SVector::from(array)
+    }
 }
 
+static mut WHEEL_MOVED_EVENT_QUEUE: Queue<WheelMovedEvent, U16> = Queue(heapless::i::Queue::new());
 static mut RUNNING_SYSTEM: Option<RunningSystem<PB08, PB09, TC2, PA07, PB04, TC3, PB05, PB06, TC4>> = None;
 
 /* 
@@ -349,6 +369,13 @@ static mut I2C_SWITCH: Option<Xca9548a<SensorI2C>> = None;
 static mut TOF_SENSORS: Option<TofSensors> = None;
 static mut EVENT_QUEUE: Queue<SensorEvent, U16> = Queue(heapless::i::Queue::new());
 
+enum VehicleState {
+    IDLE,
+    PATH1,
+    PATH2,
+    ARRIVE,
+}
+
 #[entry]
 fn main() -> ! {
     // 初期化処理
@@ -375,6 +402,11 @@ fn main() -> ! {
     let mut pins = Pins::new(peripherals.PORT);
     
     // 走行装置の初期化
+    let wheel_mat = matrix![
+        0.5_f32, - 3.0_f32.sqrt() / 2.0_f32, 0.0_f32;
+      - 1.0_f32,   0.0_f32                 , 0.0_f32;
+        0.5_f32,   3.0_f32.sqrt() / 2.0_f32, 0.0_f32;
+    ];
     let running_system = RunningSystem {
         wheel_0: Wheel::new(0, pins.a0_d0.into(), pins.a1_d1.into(),
             TimerCounter::tc2_(&tc2_tc3, peripherals.TC2, &mut peripherals.MCLK), interrupt::TC2),
@@ -382,6 +414,9 @@ fn main() -> ! {
             TimerCounter::tc3_(&tc2_tc3, peripherals.TC3, &mut peripherals.MCLK), interrupt::TC3),
         wheel_2: Wheel::new(2, pins.a4_d4.into(), pins.a5_d5.into(),
             TimerCounter::tc4_(&tc4_tc5, peripherals.TC4, &mut peripherals.MCLK), interrupt::TC4),
+        mat_for_wheel_v: wheel_mat,
+        // mat_for_odometry: wheel_mat.try_inverse().unwrap(),
+        mat_for_odometry: wheel_mat,
     };
 
     unsafe { RUNNING_SYSTEM = Some(running_system); }
@@ -447,24 +482,59 @@ fn main() -> ! {
     tof_interrupt!(TOF_SENSORS, sensor5_gpio1, sensor5_i2c, 5u16, EIC_EXTINT_13);
     let mut consumer = unsafe { EVENT_QUEUE.split().1 };
 
+    let mut wheel_event_queue = unsafe { WHEEL_MOVED_EVENT_QUEUE.split().1 };
+
     // 初期化の後処理
     configurable_eic.finalize();
 
+    let mut vehicle_state = VehicleState::IDLE;
+    let mut moved_count = 0;
+
     loop {
-        if let Some(event) = start_event_queue.dequeue() {
-            if event.pressed {
-                unsafe {
-                    let running_system = RUNNING_SYSTEM.as_mut().unwrap();
-                    running_system.run(vector![50.0_f32, 0.0_f32, 0.0_f32]);
+        match vehicle_state {
+            VehicleState::IDLE => {
+                if let Some(event) = start_event_queue.dequeue() {
+                    if event.pressed {
+                        unsafe {
+                            let running_system = RUNNING_SYSTEM.as_mut().unwrap();
+                            running_system.run(vector![50.0_f32, 0.0_f32, 0.0_f32]);
+                        }
+                        vehicle_state = VehicleState::PATH1;
+                    }
                 }
-            }
-        }
-        if let Some(interrupt_event) = consumer.dequeue() {
-            if interrupt_event.id == 4 && interrupt_event.distance < 50 {
-                unsafe {
-                    let running_system = RUNNING_SYSTEM.as_mut().unwrap();
-                    running_system.stop();
+            },
+            VehicleState::PATH1 => {
+                if let Some(moved) = wheel_event_queue.dequeue() {
+                    if moved.id == 1 {
+                        moved_count = moved_count + 1;
+                    }
+                    if moved_count == 500 {
+                        moved_count = 0;
+                        vehicle_state = VehicleState::PATH2;
+                        unsafe {
+                            let running_system = RUNNING_SYSTEM.as_mut().unwrap();
+                            running_system.run(vector![0.0_f32, -50.0_f32, 0.0_f32]);
+                        }
+                    }
                 }
+            },
+            VehicleState::PATH2 => {
+                if let Some(moved) = wheel_event_queue.dequeue() {
+                    if moved.id == 2 {
+                        moved_count = moved_count + 1;
+                    }
+                    if moved_count == 450 {
+                        unsafe {
+                            let running_system = RUNNING_SYSTEM.as_mut().unwrap();
+                            running_system.stop();
+                        }
+                        moved_count = 0;
+                        vehicle_state = VehicleState::ARRIVE;
+                    }
+                }
+            },
+            VehicleState::ARRIVE => {
+                vehicle_state = VehicleState::IDLE;
             }
         }
     }
