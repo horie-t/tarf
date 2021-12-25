@@ -130,10 +130,11 @@ struct RunningSystem<S0: PinId, D0: PinId, T0: Count16,
 impl <S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1: Count16, S2: PinId, D2: PinId, T2: Count16> RunningSystem<S0, D0, T0, S1, D1, T1, S2, D2, T2> {
     /// * `v` - 移動ベクトル。ロボット座標系。zは回転(rad/sec)を表す。
     fn run(&mut self, v: Vector3<f32>) {
+        // TODO: 車体中心から車輪までの距離を測定する。
         let mat: Matrix3<f32> = matrix![
-              0.5_f32, - 3.0_f32.sqrt() / 2.0_f32, self.wheel_0.radius;
-            - 1.0_f32,   0.0_f32                 , self.wheel_1.radius;
-              0.5_f32,   3.0_f32.sqrt() / 2.0_f32, self.wheel_2.radius;
+              0.5_f32, - 3.0_f32.sqrt() / 2.0_f32, 0.0_f32;
+            - 1.0_f32,   0.0_f32                 , 0.0_f32;
+              0.5_f32,   3.0_f32.sqrt() / 2.0_f32, 0.0_f32;
         ];
         let wheels_v = mat * v;
         self.wheel_0.start_with_speed(wheels_v.x);
