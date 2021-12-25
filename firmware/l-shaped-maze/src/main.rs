@@ -13,6 +13,10 @@ use xca9548a::{I2cSlave, SlaveAddr, Xca9548a};
 
 use panic_halt as _;
 
+
+use nalgebra as na;
+use na::{Matrix3, Vector3, matrix, vector};
+
 use wio::hal::eic::ConfigurableEIC;
 use wio_terminal as wio;
 use wio::{entry, Pins};
@@ -44,16 +48,20 @@ struct Wheel<S: PinId, D: PinId, T: Count16> {
     step_pin: Pin<S, Output<PushPull>>,
     direction_pin: Pin<D, Output<PushPull>>,
     timer_counter: TimerCounter<T>,
+    radius: f32,
 }
 
 impl<S: PinId, D: PinId, T: Count16> Wheel<S, D, T> {
+    const RADIUS: f32 = 24.0_f32;
+
     fn new(id: u32, step_pin: Pin<S, Input<Floating>>, direction_pin: Pin<D, Input<Floating>>,
         timer_counter: TimerCounter<T>, interrupt: interrupt) -> Wheel<S, D, T>{
             let mut wheel = Wheel {
                 id,
                 step_pin: step_pin.into_push_pull_output(),
                 direction_pin: direction_pin.into_push_pull_output(),
-                timer_counter
+                timer_counter,
+                radius: Self::RADIUS,
             };
             wheel.set_rotate_direction(WheelRotateDirection::ClockWise);
 
@@ -79,15 +87,19 @@ impl<S: PinId, D: PinId, T: Count16> Wheel<S, D, T> {
         }
     }
 
-    fn start(&mut self, rpm: f32) {
-        if rpm < 0_f32 {
+    fn start_with_rps(&mut self, rotate_per_sec: f32) {
+        if rotate_per_sec < 0_f32 {
             self.set_rotate_direction(WheelRotateDirection::CounterClockWise)
         } else {
             self.set_rotate_direction(WheelRotateDirection::ClockWise)
         }
-        let pulse_hz = (((2_f32 * 200_f32) / 60_f32 * rpm.abs()) as u32).hz();
+        let pulse_hz = ((2_f32 * 200_f32 * rotate_per_sec.abs()) as u32).hz();
         self.timer_counter.start(pulse_hz);
         self.timer_counter.enable_interrupt();
+    }
+
+    fn start_with_speed(&mut self, speed_mm_per_sec: f32) {
+        self.start_with_rps(speed_mm_per_sec / (2.0_f32 * PI * self.radius));
     }
 
     fn stop(&mut self) {
@@ -116,10 +128,17 @@ struct RunningSystem<S0: PinId, D0: PinId, T0: Count16,
 }
 
 impl <S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1: Count16, S2: PinId, D2: PinId, T2: Count16> RunningSystem<S0, D0, T0, S1, D1, T1, S2, D2, T2> {
-    fn run(&mut self, direction_rad: f32) {
-        self.wheel_0.start(20_f32 * (direction_rad - FRAC_PI_6 * 5_f32).cos());
-        self.wheel_1.start(20_f32 * (direction_rad + FRAC_PI_2).cos());
-        self.wheel_2.start(20_f32 * (direction_rad - FRAC_PI_6).cos());
+    /// * `v` - 移動ベクトル。ロボット座標系。zは回転(rad/sec)を表す。
+    fn run(&mut self, v: Vector3<f32>) {
+        let mat: Matrix3<f32> = matrix![
+              0.5_f32, - 3.0_f32.sqrt() / 2.0_f32, self.wheel_0.radius;
+            - 1.0_f32,   0.0_f32                 , self.wheel_1.radius;
+              0.5_f32,   3.0_f32.sqrt() / 2.0_f32, self.wheel_2.radius;
+        ];
+        let wheels_v = mat * v;
+        self.wheel_0.start_with_speed(wheels_v.x);
+        self.wheel_1.start_with_speed(wheels_v.y);
+        self.wheel_2.start_with_speed(wheels_v.z);
     }
 
     fn stop(&mut self) {
@@ -435,7 +454,7 @@ fn main() -> ! {
             if event.pressed {
                 unsafe {
                     let running_system = RUNNING_SYSTEM.as_mut().unwrap();
-                    running_system.run(FRAC_PI_2);
+                    running_system.run(vector![50.0_f32, 0.0_f32, 0.0_f32]);
                 }
             }
         }
