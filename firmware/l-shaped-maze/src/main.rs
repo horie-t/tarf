@@ -403,9 +403,9 @@ fn main() -> ! {
     
     // 走行装置の初期化
     let wheel_mat = matrix![
-        0.5_f32, - 3.0_f32.sqrt() / 2.0_f32, 31.5_f32;
-      - 1.0_f32,   0.0_f32                 , 31.5_f32;
-        0.5_f32,   3.0_f32.sqrt() / 2.0_f32, 31.5_f32;
+        0.5_f32, - 3.0_f32.sqrt() / 2.0_f32, 49.0_f32;
+      - 1.0_f32,   0.0_f32                 , 49.0_f32;
+        0.5_f32,   3.0_f32.sqrt() / 2.0_f32, 49.0_f32;
     ];
     let running_system = RunningSystem {
         wheel_0: Wheel::new(0, pins.a0_d0.into(), pins.a1_d1.into(),
