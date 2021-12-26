@@ -2,6 +2,9 @@
 
 2マスが並んだだけの迷路で、1マス分だけ移動して停止します。
 
+https://user-images.githubusercontent.com/10256609/146671191-d4141ed7-b348-41c7-b9aa-39eaede043df.mp4
+
+
 ## 使用パーツ
 
 * [Wio Terminal](https://www.switch-science.com/catalog/6360/)

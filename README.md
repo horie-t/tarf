@@ -2,7 +2,7 @@
 
 マイクロ・マウスを制作するプロジェクトです。
 
-https://user-images.githubusercontent.com/10256609/146671191-d4141ed7-b348-41c7-b9aa-39eaede043df.mp4
+https://user-images.githubusercontent.com/10256609/147396291-ffb31e72-3d9a-439a-b9cf-388e6bfda69a.mp4
 
 Tarfは以下の特徴を持ちます。
 
@@ -82,6 +82,8 @@ Firmware
 | 16       | [TOF 距離センサを6つ](./firmware/tof-sensor-hub-6/)接続する。                       |
 | 17       | [TOF 距離センサで連続測定モード](./firmware/tof-sensor-interrupt/)で測定する。      |
 | 18       | [2マスの直線だけの迷路](./firmware/straight-line-maze/)を走行する。                 |
+| 19       | [L字型迷路](./firmware/straight-line-maze/)をデッド・レコニングで走行する。           |
+
 
 Body
 
