@@ -403,9 +403,9 @@ fn main() -> ! {
     
     // 走行装置の初期化
     let wheel_mat = matrix![
-        0.5_f32, - 3.0_f32.sqrt() / 2.0_f32, 0.0_f32;
-      - 1.0_f32,   0.0_f32                 , 0.0_f32;
-        0.5_f32,   3.0_f32.sqrt() / 2.0_f32, 0.0_f32;
+        0.5_f32, - 3.0_f32.sqrt() / 2.0_f32, 31.5_f32;
+      - 1.0_f32,   0.0_f32                 , 31.5_f32;
+        0.5_f32,   3.0_f32.sqrt() / 2.0_f32, 31.5_f32;
     ];
     let running_system = RunningSystem {
         wheel_0: Wheel::new(0, pins.a0_d0.into(), pins.a1_d1.into(),
@@ -415,8 +415,8 @@ fn main() -> ! {
         wheel_2: Wheel::new(2, pins.a4_d4.into(), pins.a5_d5.into(),
             TimerCounter::tc4_(&tc4_tc5, peripherals.TC4, &mut peripherals.MCLK), interrupt::TC4),
         mat_for_wheel_v: wheel_mat,
-        // mat_for_odometry: wheel_mat.try_inverse().unwrap(),
-        mat_for_odometry: wheel_mat,
+        mat_for_odometry: wheel_mat.try_inverse().unwrap(),
+        // mat_for_odometry: wheel_mat,
     };
 
     unsafe { RUNNING_SYSTEM = Some(running_system); }
