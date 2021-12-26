@@ -46,6 +46,7 @@ enum WheelRotateDirection {
 
 struct Wheel<S: PinId, D: PinId, T: Count16> {
     id: u32,
+    direction: WheelRotateDirection,
     step_pin: Pin<S, Output<PushPull>>,
     direction_pin: Pin<D, Output<PushPull>>,
     timer_counter: TimerCounter<T>,
@@ -59,6 +60,7 @@ impl<S: PinId, D: PinId, T: Count16> Wheel<S, D, T> {
         timer_counter: TimerCounter<T>, interrupt: interrupt) -> Wheel<S, D, T>{
             let mut wheel = Wheel {
                 id,
+                direction: WheelRotateDirection::ClockWise,
                 step_pin: step_pin.into_push_pull_output(),
                 direction_pin: direction_pin.into_push_pull_output(),
                 timer_counter,
@@ -78,6 +80,7 @@ impl<S: PinId, D: PinId, T: Count16> Wheel<S, D, T> {
     }
 
     fn set_rotate_direction(&mut self, dir: WheelRotateDirection) {
+        self.direction = dir;
         match dir {
             WheelRotateDirection::ClockWise => {
                 self.direction_pin.set_high().unwrap();
@@ -90,8 +93,10 @@ impl<S: PinId, D: PinId, T: Count16> Wheel<S, D, T> {
 
     fn start_with_rps(&mut self, rotate_per_sec: f32) {
         if rotate_per_sec < 0_f32 {
+            self.direction = WheelRotateDirection::CounterClockWise;
             self.set_rotate_direction(WheelRotateDirection::CounterClockWise)
         } else {
+            self.direction = WheelRotateDirection::ClockWise;
             self.set_rotate_direction(WheelRotateDirection::ClockWise)
         }
         let pulse_hz = ((2_f32 * 200_f32 * rotate_per_sec.abs()) as u32).hz();
@@ -122,9 +127,19 @@ macro_rules! wheel_interrupt {
                 running_system.$Wheel.timer_counter.wait().unwrap();
 
                 let mut q = WHEEL_MOVED_EVENT_QUEUE.split().0;
+                let distance = {
+                    match running_system.$Wheel.direction {
+                        WheelRotateDirection::ClockWise => {
+                            (2.0_f32 * PI * running_system.$Wheel.radius) / (2.0_f32 * 200.0_f32)
+                        },
+                        WheelRotateDirection::CounterClockWise => {
+                            (- 2.0_f32 * PI * running_system.$Wheel.radius) / (2.0_f32 * 200.0_f32)
+                        }
+                    }
+                };
                 q.enqueue(WheelMovedEvent {
                     id: running_system.$Wheel.id,
-                    distance: (2.0_f32 * PI * running_system.$Wheel.radius) / (2.0_f32 * 200.0_f32),
+                    distance: distance
                 }).ok();
             });
         }
@@ -403,9 +418,9 @@ fn main() -> ! {
     
     // 走行装置の初期化
     let wheel_mat = matrix![
-        0.5_f32, - 3.0_f32.sqrt() / 2.0_f32, 49.0_f32;
-      - 1.0_f32,   0.0_f32                 , 49.0_f32;
-        0.5_f32,   3.0_f32.sqrt() / 2.0_f32, 49.0_f32;
+        0.5_f32, - 3.0_f32.sqrt() / 2.0_f32, - 49.0_f32;
+      - 1.0_f32,   0.0_f32                 , - 49.0_f32;
+        0.5_f32,   3.0_f32.sqrt() / 2.0_f32, - 49.0_f32;
     ];
     let running_system = RunningSystem {
         wheel_0: Wheel::new(0, pins.a0_d0.into(), pins.a1_d1.into(),
@@ -416,7 +431,6 @@ fn main() -> ! {
             TimerCounter::tc4_(&tc4_tc5, peripherals.TC4, &mut peripherals.MCLK), interrupt::TC4),
         mat_for_wheel_v: wheel_mat,
         mat_for_odometry: wheel_mat.try_inverse().unwrap(),
-        // mat_for_odometry: wheel_mat,
     };
 
     unsafe { RUNNING_SYSTEM = Some(running_system); }
@@ -488,6 +502,7 @@ fn main() -> ! {
     configurable_eic.finalize();
 
     let mut vehicle_state = VehicleState::IDLE;
+    let mut position = Vector3::<f32>::zeros();
     let mut moved_count = 0;
 
     loop {
@@ -505,11 +520,11 @@ fn main() -> ! {
             },
             VehicleState::PATH1 => {
                 if let Some(moved) = wheel_event_queue.dequeue() {
-                    if moved.id == 1 {
-                        moved_count = moved_count + 1;
+                    unsafe {
+                        let running_system = RUNNING_SYSTEM.as_mut().unwrap();
+                        position += running_system.wheel_step_to_vec(moved);
                     }
-                    if moved_count == 500 {
-                        moved_count = 0;
+                    if position.x > 180_f32  {
                         vehicle_state = VehicleState::PATH2;
                         unsafe {
                             let running_system = RUNNING_SYSTEM.as_mut().unwrap();
@@ -520,15 +535,16 @@ fn main() -> ! {
             },
             VehicleState::PATH2 => {
                 if let Some(moved) = wheel_event_queue.dequeue() {
-                    if moved.id == 2 {
-                        moved_count = moved_count + 1;
+                    unsafe {
+                        let running_system = RUNNING_SYSTEM.as_mut().unwrap();
+                        position += running_system.wheel_step_to_vec(moved);
                     }
-                    if moved_count == 450 {
+                    if position.y < -180_f32  {
                         unsafe {
                             let running_system = RUNNING_SYSTEM.as_mut().unwrap();
                             running_system.stop();
                         }
-                        moved_count = 0;
+                        position = Vector3::zeros();
                         vehicle_state = VehicleState::ARRIVE;
                     }
                 }
