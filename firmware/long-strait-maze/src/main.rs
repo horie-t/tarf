@@ -2,10 +2,12 @@
 #![no_main]
 
 use core::f32::consts::{PI, FRAC_PI_2, FRAC_PI_3, FRAC_PI_4, FRAC_PI_6};
+use core::fmt::Write;
 
 use cortex_m::interrupt::{free as disable_interrupts, CriticalSection};
 use cortex_m::peripheral::NVIC;
-use heapless::consts::{U8, U16};
+use heapless::String;
+use heapless::consts::{U8, U16, U40};
 use heapless::spsc::Queue;
 use micromath::F32Ext;
 use vl53l0x::VL53L0x;
@@ -13,6 +15,11 @@ use xca9548a::{I2cSlave, SlaveAddr, Xca9548a};
 
 use panic_halt as _;
 
+use embedded_graphics::mono_font::{ascii::FONT_10X20, MonoTextStyle};
+use embedded_graphics::pixelcolor::Rgb565;
+use embedded_graphics::prelude::*;
+use embedded_graphics::primitives::{Rectangle, PrimitiveStyle};
+use embedded_graphics::text::Text;
 
 use nalgebra as na;
 use na::{Matrix3, Vector3, matrix, vector};
@@ -20,12 +27,12 @@ use na::base::SVector;
 
 use wio::hal::eic::ConfigurableEIC;
 use wio_terminal as wio;
-use wio::{entry, Pins};
+use wio::{entry, Display, Pins};
 use wio::hal::clock::GenericClockController;
 use wio::hal::delay::Delay;
 use wio::hal::common::eic;
 use wio::hal::common::eic::pin::{ExtInt4, ExtInt6, ExtInt7, ExtInt10, ExtInt12, ExtInt13, ExtInt14, ExternalInterrupt, Sense};
-use wio::hal::gpio;
+use wio::hal::{gpio, calibration};
 use wio::hal::gpio::v1::{Port, Pa4, Pa16, Pa17, Pa6, Pb7, Pb12, Pb13, Pb14, Pc26, PfD};
 use wio::hal::gpio::v2::{Alternate, D, Floating, Input, Interrupt, Output, PA07, PA16, PA17, PB04, PB05, PB06, PB08, PB09, Pin, PinId, PushPull};
 use wio::hal::sercom::v2::{Pad0, Pad1};
@@ -437,6 +444,8 @@ fn main() -> ! {
     wheel_interrupt!(RUNNING_SYSTEM, TC3, wheel_1);
     wheel_interrupt!(RUNNING_SYSTEM, TC4, wheel_2);
 
+    let mut wheel_event_queue = unsafe { WHEEL_MOVED_EVENT_QUEUE.split().1 };
+
     // スタートボタンの初期化
     let start_button = Button::new(
         pins.button1,
@@ -450,6 +459,33 @@ fn main() -> ! {
     unsafe { START_BUTTON = Some(start_button); }
     button_interrupt!(START_BUTTON, EIC_EXTINT_10);
     let mut start_event_queue = unsafe { START_BUTTON.as_mut().unwrap().queue.split().1 };
+
+    // LCDの初期化
+    let (mut display, _blacklight) = (Display {
+        miso: pins.lcd_miso,
+        mosi: pins.lcd_mosi,
+        sck: pins.lcd_sck,
+        cs: pins.lcd_cs,
+        dc: pins.lcd_dc,
+        reset: pins.lcd_reset,
+        backlight: pins.lcd_backlight
+    }).init(&mut clocks, peripherals.SERCOM7, &mut peripherals.MCLK, &mut pins.port, 58.mhz(), &mut delay)
+    .ok().unwrap();
+
+    // 背景を黒にする
+    let fill = PrimitiveStyle::with_fill(Rgb565::BLACK);
+    display
+        .bounding_box()
+        .into_styled(fill)
+        .draw(&mut display).unwrap();
+
+    // 文字を表示
+    let character_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
+    Text::new(
+        "Hello, Tarf!",
+        Point::new(10, 20),
+        character_style)
+    .draw(&mut display).unwrap();    
 
     // センサの初期化
     let i2c: I2CMaster3<Sercom3Pad0<Pa17<PfD>>, Sercom3Pad1<Pa16<PfD>>> = I2CMaster3::new(
@@ -494,8 +530,8 @@ fn main() -> ! {
     tof_interrupt!(TOF_SENSORS, sensor4_gpio1, sensor4_i2c, 4u16, EIC_EXTINT_12);
     tof_interrupt!(TOF_SENSORS, sensor5_gpio1, sensor5_i2c, 5u16, EIC_EXTINT_13);
     let mut consumer = unsafe { EVENT_QUEUE.split().1 };
-
-    let mut wheel_event_queue = unsafe { WHEEL_MOVED_EVENT_QUEUE.split().1 };
+    let mut distances = [0_f32; 6];
+    let calibration_values = [17.2_f32, 5.9_f32, 4.1_f32, 4.2_f32, 7.13_f32, 22.6_f32];
 
     // 初期化の後処理
     configurable_eic.finalize();
@@ -504,6 +540,30 @@ fn main() -> ! {
     let mut position = Vector3::<f32>::zeros();
 
     loop {
+        // センサ情報を取得・表示
+        if let Some(interrupt_event) = consumer.dequeue() {
+            let id = interrupt_event.id as usize;
+            let calibrated_distance = interrupt_event.distance as f32 - calibration_values[id];
+            // distances[id] = 0.5_f32 * calibrated_distance + 0.5_f32 * distances[id];
+            distances[id] = calibrated_distance;
+
+            // let mut text: String<U40> = String::new();
+            // for distance in distances.iter() {
+            //     write!(text, "{}, ", (*distance as i16)).unwrap();
+            // }
+
+            // Rectangle::new(Point::new(10, 21), Size::new(320, 21))
+            // .into_styled(fill)
+            // .draw(&mut display).unwrap();
+    
+            // Text::new(
+            //     text.as_str(),
+            //     Point::new(10, 40),
+            //     character_style)
+            // .draw(&mut display).unwrap();
+        }
+
+        // 走行制御
         match vehicle_state {
             VehicleState::IDLE => {
                 if let Some(event) = start_event_queue.dequeue() {
@@ -522,9 +582,7 @@ fn main() -> ! {
                         let running_system = RUNNING_SYSTEM.as_mut().unwrap();
                         position += running_system.wheel_step_to_vec(moved);
                     }
-                }
-                if let Some(interrupt_event) = consumer.dequeue() {
-                    if interrupt_event.id == 1 && interrupt_event.distance < 50 {
+                    if distances[1] < 30.0_f32 {
                         unsafe {
                             let running_system = RUNNING_SYSTEM.as_mut().unwrap();
                             running_system.stop();
@@ -536,6 +594,20 @@ fn main() -> ! {
             },
             VehicleState::ARRIVE => {
                 vehicle_state = VehicleState::IDLE;
+                let mut text: String<U40> = String::new();
+                for distance in distances.iter() {
+                    write!(text, "{}, ", (*distance as i16)).unwrap();
+                }
+
+                Rectangle::new(Point::new(10, 21), Size::new(320, 21))
+                .into_styled(fill)
+                .draw(&mut display).unwrap();
+        
+                Text::new(
+                    text.as_str(),
+                    Point::new(10, 40),
+                    character_style)
+                .draw(&mut display).unwrap();
             }
         }
     }
