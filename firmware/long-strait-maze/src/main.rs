@@ -170,7 +170,6 @@ struct RunningSystem<S0: PinId, D0: PinId, T0: Count16,
 impl <S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1: Count16, S2: PinId, D2: PinId, T2: Count16> RunningSystem<S0, D0, T0, S1, D1, T1, S2, D2, T2> {
     /// * `v` - 移動ベクトル。ロボット座標系。zは回転(rad/sec)を表す。
     fn run(&mut self, v: Vector3<f32>) {
-        // TODO: 車体中心から車輪までの距離を測定する。
         let wheels_v = self.mat_for_wheel_v * v;
         self.wheel_0.start_with_speed(wheels_v.x);
         self.wheel_1.start_with_speed(wheels_v.y);
@@ -539,6 +538,8 @@ fn main() -> ! {
     let mut vehicle_state = VehicleState::IDLE;
     let mut position = Vector3::<f32>::zeros();
 
+    let mut step_count = 0;
+
     loop {
         // センサ情報を取得・表示
         if let Some(interrupt_event) = consumer.dequeue() {
@@ -546,21 +547,6 @@ fn main() -> ! {
             let calibrated_distance = interrupt_event.distance as f32 - calibration_values[id];
             // distances[id] = 0.5_f32 * calibrated_distance + 0.5_f32 * distances[id];
             distances[id] = calibrated_distance;
-
-            // let mut text: String<U40> = String::new();
-            // for distance in distances.iter() {
-            //     write!(text, "{}, ", (*distance as i16)).unwrap();
-            // }
-
-            // Rectangle::new(Point::new(10, 21), Size::new(320, 21))
-            // .into_styled(fill)
-            // .draw(&mut display).unwrap();
-    
-            // Text::new(
-            //     text.as_str(),
-            //     Point::new(10, 40),
-            //     character_style)
-            // .draw(&mut display).unwrap();
         }
 
         // 走行制御
@@ -578,22 +564,29 @@ fn main() -> ! {
             },
             VehicleState::PATH1 => {
                 if let Some(moved) = wheel_event_queue.dequeue() {
+                    step_count += 1;
                     unsafe {
                         let running_system = RUNNING_SYSTEM.as_mut().unwrap();
                         position += running_system.wheel_step_to_vec(moved);
+
+                        // 時々、方向を調整する。
+                        if step_count % 128 == 0 {
+                            let sensor_diff = distances[2] - distances[0];
+                            running_system.run(vector![-50.0_f32, 0.1_f32 * sensor_diff, 0.0_f32]);
+                        }
                     }
+
+                    // 壁が近づいたら到着
                     if distances[1] < 30.0_f32 {
                         unsafe {
                             let running_system = RUNNING_SYSTEM.as_mut().unwrap();
                             running_system.stop();
                         }
-                        position = Vector3::zeros();
                         vehicle_state = VehicleState::ARRIVE;
                     }
                 }
             },
             VehicleState::ARRIVE => {
-                vehicle_state = VehicleState::IDLE;
                 let mut text: String<U40> = String::new();
                 for distance in distances.iter() {
                     write!(text, "{}, ", (*distance as i16)).unwrap();
@@ -608,6 +601,9 @@ fn main() -> ! {
                     Point::new(10, 40),
                     character_style)
                 .draw(&mut display).unwrap();
+
+                position = Vector3::zeros();
+                vehicle_state = VehicleState::IDLE;
             }
         }
     }
