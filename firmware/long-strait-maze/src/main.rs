@@ -556,7 +556,7 @@ fn main() -> ! {
                     if event.pressed {
                         unsafe {
                             let running_system = RUNNING_SYSTEM.as_mut().unwrap();
-                            running_system.run(vector![-50.0_f32, 0.0_f32, 0.0_f32]);
+                            running_system.run(vector![-75.0_f32, 0.0_f32, 0.0_f32]);
                         }
                         vehicle_state = VehicleState::PATH1;
                     }
@@ -570,9 +570,10 @@ fn main() -> ! {
                         position += running_system.wheel_step_to_vec(moved);
 
                         // 時々、方向を調整する。
-                        if step_count % 128 == 0 {
-                            let sensor_diff = distances[2] - distances[0];
-                            running_system.run(vector![-50.0_f32, 0.1_f32 * sensor_diff, 0.0_f32]);
+                        if step_count % 64 == 0 {
+                            let beside_diff = distances[2] - distances[0];
+                            let rotate_diff = distances[5] - distances[0];
+                            running_system.run(vector![-75.0_f32, 0.2_f32 * beside_diff, 0.02_f32 * rotate_diff]);
                         }
                     }
 
