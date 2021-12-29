@@ -2,6 +2,12 @@
 
 長い直線の迷路を走行します。横壁にぶつからず直進させます。
 
+
+
+https://user-images.githubusercontent.com/10256609/147648175-1db3bbdb-a26f-449c-b5db-4d6e83d2a63a.mp4
+
+
+
 ## 使用パーツ
 
 * [Wio Terminal](https://www.switch-science.com/catalog/6360/)
