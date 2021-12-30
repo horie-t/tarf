@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use core::f32::consts::{PI, FRAC_PI_2, FRAC_PI_3, FRAC_PI_4, FRAC_PI_6};
+use core::f32::consts::{PI, FRAC_PI_2, FRAC_PI_3, FRAC_PI_4, FRAC_PI_6, FRAC_PI_8};
 use core::fmt::Write;
 
 use cortex_m::interrupt::free as disable_interrupts;
@@ -171,19 +171,31 @@ impl <S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1: Count16, S2: 
     /// * `v` - 移動ベクトル。ロボット座標系。zは回転(rad/sec)を表す。
     fn run(&mut self, v: Vector3<f32>) {
         let mut wheels_v = self.mat_for_wheel_v * v;
-        // let mut max_v = 0.0_f32;
-        // let mut max_v_index:usize = 0;
-        // for (i, v) in wheels_v.iter().enumerate() {
-        //     if *v >= max_v {
-        //         max_v = *v;
-        //         max_v_index = i;
-        //     }
-        // }
-        // wheels_v[max_v_index] *= 0.925_f32;
 
-        self.wheel_0.start_with_speed(wheels_v.x);
-        self.wheel_1.start_with_speed(wheels_v.y);
-        self.wheel_2.start_with_speed(wheels_v.z);
+        // 車輪の1つが進行方向と同じ向きに回転していると、滑りが発生せずその車輪だけ進み過ぎてしまうのを抑制する。
+        if v.x * v.x + v.y * v.y > 0.0_f32 || v.x != 0.0_f32 {
+            // 超信地旋回ではない、もしくはy軸方向への移動ではない場合
+
+            // 進行方向が第2, 3象限の場合は、180度回転させた方向で判定しても同じ結果になる
+            let direction_rad = 
+                if v.x > 0.0_f32 {
+                    (v.y / v.x).atan()
+                } else {
+                    (- v.y / v.x).atan()
+                };
+            
+            if (direction_rad + FRAC_PI_3).abs() < FRAC_PI_8 {
+                wheels_v[0] = wheels_v[0] * (1.0_f32 - 0.070 * (FRAC_PI_8 - (direction_rad + FRAC_PI_3).abs()) / FRAC_PI_8);
+            } else if direction_rad.abs() < FRAC_PI_8 {
+                wheels_v[1] = wheels_v[1] * (1.0_f32 - 0.070 * (FRAC_PI_8 - direction_rad.abs()              ) / FRAC_PI_8);
+            } else if (direction_rad - FRAC_PI_3).abs() < FRAC_PI_8 {
+                wheels_v[2] = wheels_v[2] * (1.0_f32 - 0.070 * (FRAC_PI_8 - (direction_rad - FRAC_PI_3).abs()) / FRAC_PI_8);
+            }
+        }
+
+        self.wheel_0.start_with_speed(wheels_v[0]);
+        self.wheel_1.start_with_speed(wheels_v[1]);
+        self.wheel_2.start_with_speed(wheels_v[2]);
     }
 
     fn stop(&mut self) {
@@ -548,9 +560,7 @@ fn main() -> ! {
     let mut vehicle_state = VehicleState::IDLE;
     let mut position = Vector3::<f32>::zeros();
     let velocity = 50.0_f32;
-    let direction_rad = PI - 3.0_f32 * PI / 100.0_f32;
-    // let direction_rad = FRAC_PI_3 * 2.0_f32;
-    // let direction_rad = FRAC_PI_3 * 4.0_f32;
+    let direction_rad = PI;
 
     // ホイールのステップ回数
     let mut step_count = 0;
@@ -594,8 +604,6 @@ fn main() -> ! {
 
                     // 壁が近づいたら到着
                     if distances[1] < 30.0_f32 {
-                    // if distances[2] < 30.0_f32 {
-                    // if distances[0] < 30.0_f32 {
                         unsafe {
                             let running_system = RUNNING_SYSTEM.as_mut().unwrap();
                             running_system.stop();
