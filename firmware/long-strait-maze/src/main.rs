@@ -171,15 +171,15 @@ impl <S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1: Count16, S2: 
     /// * `v` - 移動ベクトル。ロボット座標系。zは回転(rad/sec)を表す。
     fn run(&mut self, v: Vector3<f32>) {
         let mut wheels_v = self.mat_for_wheel_v * v;
-        let mut max_v = 0.0_f32;
-        let mut max_v_index:usize = 0;
-        for (i, v) in wheels_v.iter().enumerate() {
-            if *v >= max_v {
-                max_v = *v;
-                max_v_index = i;
-            }
-        }
-        wheels_v[max_v_index] *= 0.925_f32;
+        // let mut max_v = 0.0_f32;
+        // let mut max_v_index:usize = 0;
+        // for (i, v) in wheels_v.iter().enumerate() {
+        //     if *v >= max_v {
+        //         max_v = *v;
+        //         max_v_index = i;
+        //     }
+        // }
+        // wheels_v[max_v_index] *= 0.925_f32;
 
         self.wheel_0.start_with_speed(wheels_v.x);
         self.wheel_1.start_with_speed(wheels_v.y);
@@ -548,7 +548,7 @@ fn main() -> ! {
     let mut vehicle_state = VehicleState::IDLE;
     let mut position = Vector3::<f32>::zeros();
     let velocity = 50.0_f32;
-    let direction_rad = PI;
+    let direction_rad = PI - 3.0_f32 * PI / 100.0_f32;
     // let direction_rad = FRAC_PI_3 * 2.0_f32;
     // let direction_rad = FRAC_PI_3 * 4.0_f32;
 
