@@ -4,7 +4,7 @@
 use core::f32::consts::{PI, FRAC_PI_2, FRAC_PI_3, FRAC_PI_4, FRAC_PI_6};
 use core::fmt::Write;
 
-use cortex_m::interrupt::{free as disable_interrupts, CriticalSection};
+use cortex_m::interrupt::free as disable_interrupts;
 use cortex_m::peripheral::NVIC;
 use heapless::String;
 use heapless::consts::{U8, U16, U40};
@@ -32,7 +32,7 @@ use wio::hal::clock::GenericClockController;
 use wio::hal::delay::Delay;
 use wio::hal::common::eic;
 use wio::hal::common::eic::pin::{ExtInt4, ExtInt6, ExtInt7, ExtInt10, ExtInt12, ExtInt13, ExtInt14, ExternalInterrupt, Sense};
-use wio::hal::{gpio, calibration};
+use wio::hal::gpio;
 use wio::hal::gpio::v1::{Port, Pa4, Pa16, Pa17, Pa6, Pb7, Pb12, Pb13, Pb14, Pc26, PfD};
 use wio::hal::gpio::v2::{Alternate, D, Floating, Input, Interrupt, Output, PA07, PA16, PA17, PB04, PB05, PB06, PB08, PB09, Pin, PinId, PushPull};
 use wio::hal::sercom::v2::{Pad0, Pad1};
@@ -170,7 +170,17 @@ struct RunningSystem<S0: PinId, D0: PinId, T0: Count16,
 impl <S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1: Count16, S2: PinId, D2: PinId, T2: Count16> RunningSystem<S0, D0, T0, S1, D1, T1, S2, D2, T2> {
     /// * `v` - 移動ベクトル。ロボット座標系。zは回転(rad/sec)を表す。
     fn run(&mut self, v: Vector3<f32>) {
-        let wheels_v = self.mat_for_wheel_v * v;
+        let mut wheels_v = self.mat_for_wheel_v * v;
+        let mut max_v = 0.0_f32;
+        let mut max_v_index:usize = 0;
+        for (i, v) in wheels_v.iter().enumerate() {
+            if *v >= max_v {
+                max_v = *v;
+                max_v_index = i;
+            }
+        }
+        wheels_v[max_v_index] *= 0.925_f32;
+
         self.wheel_0.start_with_speed(wheels_v.x);
         self.wheel_1.start_with_speed(wheels_v.y);
         self.wheel_2.start_with_speed(wheels_v.z);
