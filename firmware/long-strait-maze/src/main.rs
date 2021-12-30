@@ -563,15 +563,14 @@ fn main() -> ! {
     let direction_rad = PI;
 
     // ホイールのステップ回数
-    let mut step_count = 0;
+    let mut step_count = 1;
 
     loop {
         // センサ情報を取得・表示
         if let Some(interrupt_event) = consumer.dequeue() {
             let id = interrupt_event.id as usize;
             let calibrated_distance = interrupt_event.distance as f32 - calibration_values[id];
-            // distances[id] = 0.5_f32 * calibrated_distance + 0.5_f32 * distances[id];
-            distances[id] = calibrated_distance;
+            distances[id] = 0.5_f32 * calibrated_distance + 0.5_f32 * distances[id];
         }
 
         // 走行制御
@@ -594,12 +593,14 @@ fn main() -> ! {
                         let running_system = RUNNING_SYSTEM.as_mut().unwrap();
                         position += running_system.wheel_step_to_vec(moved);
 
-                        // // 時々、方向を調整する。
-                        // if step_count % 64 == 0 {
-                        //     let beside_diff = distances[2] - distances[0];
-                        //     let rotate_diff = distances[5] - distances[0];
-                        //     running_system.run(vector![-75.0_f32, 0.2_f32 * beside_diff, 0.02_f32 * rotate_diff]);
-                        // }
+                        // 時々、方向を調整する。
+                        if step_count % 128 == 0 {
+                            let beside_diff = distances[2] - distances[0];
+                            let rotate_diff = distances[5] - distances[0];
+                            running_system.run(vector![velocity * direction_rad.cos(),
+                                velocity * direction_rad.sin() + 0.2_f32 * beside_diff,
+                                0.02_f32 * rotate_diff]);
+                        }
                     }
 
                     // 壁が近づいたら到着
