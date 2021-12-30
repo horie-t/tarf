@@ -82,7 +82,8 @@ Firmware
 | 16       | [TOF 距離センサを6つ](./firmware/tof-sensor-hub-6/)接続する。                       |
 | 17       | [TOF 距離センサで連続測定モード](./firmware/tof-sensor-interrupt/)で測定する。      |
 | 18       | [2マスの直線だけの迷路](./firmware/straight-line-maze/)を走行する。                 |
-| 19       | [L字型迷路](./firmware/straight-line-maze/)をデッド・レコニングで走行する。           |
+| 19       | [L字型迷路](./firmware/l-shaped-maze/)をデッド・レコニングで走行する。              |
+| 20       | [長い直線迷路](./firmware/long-strait-maze/)を補正しながら走行する。                |
 
 
 Body
@@ -97,6 +98,11 @@ Body
 | 6        | [TOF距離センサを搭載](./cad/core1_motor_sensor_4)                                   |
 | 7        | [Wio Terminalとバッテリーの収納部にI2Cハブを搭載](./cad/core2_3)                    |
 
+
+curcuit
+| ステップ | 内容                                                                                |
+| -------- | ----------------------------------------------------------------------------------- |
+| 1 | [回路図](./circuit/universal_board_both.svg)  |
 
 ## 参考情報
 
