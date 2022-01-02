@@ -234,7 +234,6 @@ impl <S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1: Count16, S2: 
         let diff_angle = self.target_point.z - self.trip_vec.z;
         if distance < 3.0_f32 && diff_angle < (PI / 90.0_f32) {
             // 目的地に到着
-            // self.trip_vec = Vector3::zeros();
             self.stop();
             unsafe {
                 let mut q = RUNNING_EVENT_QUEUE.split().0;
