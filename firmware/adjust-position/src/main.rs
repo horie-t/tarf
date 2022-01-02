@@ -172,11 +172,15 @@ struct RunningSystem<S0: PinId, D0: PinId, T0: Count16,
     wheel_2: Wheel<S2, D2, T2>,
     mat_for_wheel_v: Matrix3<f32>,
     mat_for_odometry: Matrix3<f32>,
+    velocity: Vector3<f32>,
+    target_point: Vector3<f32>,
+    trip_vec: Vector3<f32>,
 }
 
 impl <S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1: Count16, S2: PinId, D2: PinId, T2: Count16> RunningSystem<S0, D0, T0, S1, D1, T1, S2, D2, T2> {
     /// * `v` - 移動ベクトル。ロボット座標系。zは回転(rad/sec)を表す。
     fn run(&mut self, v: Vector3<f32>) {
+        self.velocity = v;
         let mut wheels_v = self.mat_for_wheel_v * v;
 
         // 車輪の1つが進行方向と同じ向きに回転していると、滑りが発生せずその車輪だけ進み過ぎてしまうのを抑制する。
@@ -212,17 +216,46 @@ impl <S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1: Count16, S2: 
     }
 
     fn move_to(&mut self, target_point: Vector3<f32>) {
-        
+        self.target_point = target_point;
+        self.trip_vec = Vector3::zeros();
+
+        let trans_normalized = target_point.xy().normalize();
+        let v = vector![
+            25.0_f32 * trans_normalized.x,
+            25.0_f32 * trans_normalized.y,
+            if target_point.z != 0.0_f32 { 0.75_f32 } else {0.0_f32}
+        ];
+        self.run(v);
     }
 
-    fn wheel_step_to_vec(&self, moved: WheelMovedEvent) -> Vector3<f32> {
+    fn on_moved(&mut self, moved_event: WheelMovedEvent) {
+        self.trip_vec += self.wheel_step_to_vec(moved_event);
+        let distance = (self.target_point.xy() - self.trip_vec.xy()).magnitude();
+        let diff_angle = self.target_point.z - self.trip_vec.z;
+        if distance < 3.0_f32 && diff_angle < (PI / 90.0_f32) {
+            // 目的地に到着
+            // self.trip_vec = Vector3::zeros();
+            self.stop();
+            unsafe {
+                let mut q = RUNNING_EVENT_QUEUE.split().0;
+                q.enqueue(RunningEvent{}).ok();
+            }
+        } else if distance < 3.0_f32 {
+            self.run(vector![0.0_f32, 0.0_f32, self.velocity.z]);
+        } else if diff_angle < (PI / 90.0_f32) {
+            self.run(vector![self.velocity.x, self.velocity.y, 0.0_f32]);
+        }
+    }
+
+    fn wheel_step_to_vec(&self, moved_event: WheelMovedEvent) -> Vector3<f32> {
         let mut array = [0.0f32, 0.0f32, 0.0f32];
-        array[moved.id as usize] = moved.distance;
+        array[moved_event.id as usize] = moved_event.distance;
         self.mat_for_odometry * SVector::from(array)
     }
 }
 
 static mut WHEEL_MOVED_EVENT_QUEUE: Queue<WheelMovedEvent, U16> = Queue(heapless::i::Queue::new());
+static mut RUNNING_EVENT_QUEUE: Queue<RunningEvent, U16> = Queue(heapless::i::Queue::new());
 static mut RUNNING_SYSTEM: Option<RunningSystem<PB08, PB09, TC2, PA07, PB04, TC3, PB05, PB06, TC4>> = None;
 
 /* 
@@ -424,10 +457,10 @@ static mut TOF_SENSORS: Option<TofSensors> = None;
 static mut EVENT_QUEUE: Queue<SensorEvent, U16> = Queue(heapless::i::Queue::new());
 
 enum VehicleState {
-    IDLE,
-    POS_SET,
-    PATH1,
-    ARRIVE,
+    Idle,
+    PosSet,
+    Path1,
+    Arrive,
 }
 
 #[entry]
@@ -470,6 +503,9 @@ fn main() -> ! {
             TimerCounter::tc4_(&tc4_tc5, peripherals.TC4, &mut peripherals.MCLK), interrupt::TC4),
         mat_for_wheel_v: wheel_mat,
         mat_for_odometry: wheel_mat.try_inverse().unwrap(),
+        velocity: Vector3::zeros(),
+        target_point: Vector3::repeat(f32::MAX),
+        trip_vec: Vector3::zeros(),
     };
 
     unsafe { RUNNING_SYSTEM = Some(running_system); }
@@ -478,6 +514,7 @@ fn main() -> ! {
     wheel_interrupt!(RUNNING_SYSTEM, TC4, wheel_2);
 
     let mut wheel_event_queue = unsafe { WHEEL_MOVED_EVENT_QUEUE.split().1 };
+    let mut running_event_queue = unsafe { RUNNING_EVENT_QUEUE.split().1 };
 
     // スタートボタンの初期化
     let start_button = Button::new(
@@ -569,7 +606,7 @@ fn main() -> ! {
     // 初期化の後処理
     configurable_eic.finalize();
 
-    let mut vehicle_state = VehicleState::IDLE;
+    let mut vehicle_state = VehicleState::Idle;
     let mut position = Vector3::<f32>::zeros();
     let velocity = 50.0_f32;
     let direction_rad = PI;
@@ -587,22 +624,33 @@ fn main() -> ! {
 
         // 走行制御
         match vehicle_state {
-            VehicleState::IDLE => {
+            VehicleState::Idle => {
                 if let Some(event) = start_event_queue.dequeue() {
+                    let len = 111.0_f32 + distances[3] + distances[0];
+                    let diff_beside = distances[3] - distances[0];
+                    let move_len = diff_beside * 178.0_f32 / len;
                     if event.pressed {
                         unsafe {
                             let running_system = RUNNING_SYSTEM.as_mut().unwrap();
-                            running_system.run(vector![velocity * direction_rad.cos(), velocity * direction_rad.sin(), 0.0_f32]);
+                            running_system.move_to(vector![0.0_f32, move_len, 0.0_f32]);
                         }
-                        vehicle_state = VehicleState::POS_SET;
+                        vehicle_state = VehicleState::PosSet;
                     }
                 }
             },
-            VehicleState::POS_SET => {
-
-                vehicle_state = VehicleState::PATH1;
+            VehicleState::PosSet => {
+                if let Some(_pos_set_event) = running_event_queue.dequeue() {
+                    vehicle_state = VehicleState::Arrive;
+                }
+                if let Some(moved) = wheel_event_queue.dequeue() {
+                    step_count += 1;
+                    unsafe {
+                        let running_system = RUNNING_SYSTEM.as_mut().unwrap();
+                        running_system.on_moved(moved);
+                    }
+                }
             },
-            VehicleState::PATH1 => {
+            VehicleState::Path1 => {
                 if let Some(moved) = wheel_event_queue.dequeue() {
                     step_count += 1;
                     unsafe {
@@ -625,11 +673,11 @@ fn main() -> ! {
                             let running_system = RUNNING_SYSTEM.as_mut().unwrap();
                             running_system.stop();
                         }
-                        vehicle_state = VehicleState::ARRIVE;
+                        vehicle_state = VehicleState::Arrive;
                     }
                 }
             },
-            VehicleState::ARRIVE => {
+            VehicleState::Arrive => {
                 let mut text: String<U40> = String::new();
                 for distance in distances.iter() {
                     write!(text, "{}, ", (*distance as i16)).unwrap();
@@ -646,7 +694,7 @@ fn main() -> ! {
                 .draw(&mut display).unwrap();
 
                 position = Vector3::zeros();
-                vehicle_state = VehicleState::IDLE;
+                vehicle_state = VehicleState::Idle;
             }
         }
     }
