@@ -228,22 +228,21 @@ impl <S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1: Count16, S2: 
         self.run(v);
     }
 
-    fn on_moved(&mut self, moved_event: WheelMovedEvent) {
+    fn on_moved(&mut self, moved_event: WheelMovedEvent) -> bool {
         self.trip_vec += self.wheel_step_to_vec(moved_event);
         let distance = (self.target_point.xy() - self.trip_vec.xy()).magnitude();
         let diff_angle = self.target_point.z - self.trip_vec.z;
         if distance < 3.0_f32 && diff_angle < (PI / 90.0_f32) {
             // 目的地に到着
             self.stop();
-            unsafe {
-                let mut q = RUNNING_EVENT_QUEUE.split().0;
-                q.enqueue(RunningEvent{}).ok();
-            }
+            return true
         } else if distance < 3.0_f32 {
             self.run(vector![0.0_f32, 0.0_f32, self.velocity.z]);
         } else if diff_angle < (PI / 90.0_f32) {
             self.run(vector![self.velocity.x, self.velocity.y, 0.0_f32]);
         }
+
+        false
     }
 
     fn wheel_step_to_vec(&self, moved_event: WheelMovedEvent) -> Vector3<f32> {
@@ -254,7 +253,6 @@ impl <S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1: Count16, S2: 
 }
 
 static mut WHEEL_MOVED_EVENT_QUEUE: Queue<WheelMovedEvent, U16> = Queue(heapless::i::Queue::new());
-static mut RUNNING_EVENT_QUEUE: Queue<RunningEvent, U16> = Queue(heapless::i::Queue::new());
 static mut RUNNING_SYSTEM: Option<RunningSystem<PB08, PB09, TC2, PA07, PB04, TC3, PB05, PB06, TC4>> = None;
 
 /* 
@@ -513,7 +511,6 @@ fn main() -> ! {
     wheel_interrupt!(RUNNING_SYSTEM, TC4, wheel_2);
 
     let mut wheel_event_queue = unsafe { WHEEL_MOVED_EVENT_QUEUE.split().1 };
-    let mut running_event_queue = unsafe { RUNNING_EVENT_QUEUE.split().1 };
 
     // スタートボタンの初期化
     let start_button = Button::new(
@@ -651,14 +648,13 @@ fn main() -> ! {
                 }
             },
             VehicleState::PosSet => {
-                if let Some(_pos_set_event) = running_event_queue.dequeue() {
-                    vehicle_state = VehicleState::Arrive;
-                }
                 if let Some(moved) = wheel_event_queue.dequeue() {
                     step_count += 1;
                     unsafe {
                         let running_system = RUNNING_SYSTEM.as_mut().unwrap();
-                        running_system.on_moved(moved);
+                        if running_system.on_moved(moved) {
+                            vehicle_state = VehicleState::Arrive;
+                        }
                     }
                 }
             },
@@ -690,9 +686,6 @@ fn main() -> ! {
                 }
             },
             VehicleState::Arrive => {
-                while let Some(_pos_set_event) = running_event_queue.dequeue() {}
-                while let Some(_moved) = wheel_event_queue.dequeue() {}
-
                 let mut text: String<U40> = String::new();
                 for distance in distances.iter() {
                     write!(text, "{}, ", (*distance as i16)).unwrap();
