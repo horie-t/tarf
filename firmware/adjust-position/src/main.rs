@@ -22,7 +22,7 @@ use embedded_graphics::primitives::{Rectangle, PrimitiveStyle};
 use embedded_graphics::text::Text;
 
 use nalgebra as na;
-use na::{Matrix3, Vector3, matrix, vector};
+use na::{Matrix3, Vector3, matrix, vector, Vector2};
 use na::base::SVector;
 
 use wio::hal::eic::ConfigurableEIC;
@@ -219,19 +219,28 @@ impl <S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1: Count16, S2: 
         self.target_point = target_point;
         self.trip_vec = Vector3::zeros();
 
-        let trans_normalized = target_point.xy().normalize();
-        let v = vector![
-            25.0_f32 * trans_normalized.x,
-            25.0_f32 * trans_normalized.y,
-            if target_point.z != 0.0_f32 { 0.75_f32 } else {0.0_f32}
-        ];
+        let rotate_v = if target_point.z > 0.0_f32 {
+            0.75_f32
+        } else if target_point.z < 0.0_f32 {
+            -0.75_f32
+        } else {
+            0.0_f32
+        };
+
+        let v = if target_point.xy().eq(&Vector2::<f32>::zeros()) {
+            vector![0.0_f32, 0.0_f32, rotate_v]
+        } else {
+            let trans_normalized = target_point.xy().normalize();
+            vector![25.0_f32 * trans_normalized.x, 25.0_f32 * trans_normalized.y, rotate_v]
+        };
+
         self.run(v);
     }
 
     fn on_moved(&mut self, moved_event: WheelMovedEvent) -> bool {
         self.trip_vec += self.wheel_step_to_vec(moved_event);
         let distance = (self.target_point.xy() - self.trip_vec.xy()).magnitude();
-        let diff_angle = self.target_point.z - self.trip_vec.z;
+        let diff_angle = (self.target_point.z - self.trip_vec.z).abs();
         if distance < 3.0_f32 && diff_angle < (PI / 90.0_f32) {
             // 目的地に到着
             self.stop();
@@ -487,9 +496,9 @@ fn main() -> ! {
     
     // 走行装置の初期化
     let wheel_mat = matrix![
-        0.5_f32, - 3.0_f32.sqrt() / 2.0_f32, - 49.0_f32;
-      - 1.0_f32,   0.0_f32                 , - 49.0_f32;
-        0.5_f32,   3.0_f32.sqrt() / 2.0_f32, - 49.0_f32;
+        0.5_f32, - 3.0_f32.sqrt() / 2.0_f32, 49.0_f32;
+      - 1.0_f32,   0.0_f32                 , 49.0_f32;
+        0.5_f32,   3.0_f32.sqrt() / 2.0_f32, 49.0_f32;
     ];
     let running_system = RunningSystem {
         wheel_0: Wheel::new(0, pins.a0_d0.into(), pins.a1_d1.into(),
