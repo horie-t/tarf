@@ -628,6 +628,19 @@ fn main() -> ! {
                     let len = 111.0_f32 + distances[3] + distances[0];
                     let diff_beside = distances[3] - distances[0];
                     let move_len = diff_beside * 178.0_f32 / len;
+                    let mut text: String<U40> = String::new();
+                    write!(text, "{}, ", move_len).unwrap();
+    
+                    Rectangle::new(Point::new(10, 21), Size::new(320, 21))
+                    .into_styled(fill)
+                    .draw(&mut display).unwrap();
+            
+                    Text::new(
+                        text.as_str(),
+                        Point::new(10, 40),
+                        character_style)
+                    .draw(&mut display).unwrap();
+
                     if event.pressed {
                         unsafe {
                             let running_system = RUNNING_SYSTEM.as_mut().unwrap();
@@ -677,6 +690,9 @@ fn main() -> ! {
                 }
             },
             VehicleState::Arrive => {
+                while let Some(_pos_set_event) = running_event_queue.dequeue() {}
+                while let Some(_moved) = wheel_event_queue.dequeue() {}
+
                 let mut text: String<U40> = String::new();
                 for distance in distances.iter() {
                     write!(text, "{}, ", (*distance as i16)).unwrap();
