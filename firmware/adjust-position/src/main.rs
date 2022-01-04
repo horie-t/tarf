@@ -220,9 +220,9 @@ impl <S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1: Count16, S2: 
         self.trip_vec = Vector3::zeros();
 
         let rotate_v = if target_point.z > 0.0_f32 {
-            0.75_f32
+            0.50_f32
         } else if target_point.z < 0.0_f32 {
-            -0.75_f32
+            -0.50_f32
         } else {
             0.0_f32
         };
@@ -241,11 +241,11 @@ impl <S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1: Count16, S2: 
         self.trip_vec += self.wheel_step_to_vec(moved_event);
         let distance = (self.target_point.xy() - self.trip_vec.xy()).magnitude();
         let diff_angle = (self.target_point.z - self.trip_vec.z).abs();
-        if distance < 3.0_f32 && diff_angle < (PI / 90.0_f32) {
+        if distance < 1.0_f32 && diff_angle < (PI / 90.0_f32) {
             // 目的地に到着
             self.stop();
             return true
-        } else if distance < 3.0_f32 {
+        } else if distance < 1.0_f32 {
             self.run(vector![0.0_f32, 0.0_f32, self.velocity.z]);
         } else if diff_angle < (PI / 90.0_f32) {
             self.run(vector![self.velocity.x, self.velocity.y, 0.0_f32]);
@@ -620,7 +620,7 @@ fn main() -> ! {
     let mut step_count = 1;
 
     loop {
-        // センサ情報を取得・表示
+        // センサ情報を取得
         if let Some(interrupt_event) = consumer.dequeue() {
             let id = interrupt_event.id as usize;
             let calibrated_distance = interrupt_event.distance as f32 - calibration_values[id];
@@ -633,9 +633,13 @@ fn main() -> ! {
                 if let Some(event) = start_event_queue.dequeue() {
                     let len = 111.0_f32 + distances[3] + distances[0];
                     let diff_beside = distances[3] - distances[0];
-                    let move_len = diff_beside * 178.0_f32 / len;
+
+                    let diff_back_front = distances[0] - distances[5];
+                    let rotate = if diff_back_front > 0.0_f32 { 2.0_f32 * PI / 180.0_f32} else { - 2.0_f32 * PI / 180.0_f32};
+
+                    let move_len = (diff_beside * 168.0_f32 / len) / 2.0_f32;
                     let mut text: String<U40> = String::new();
-                    write!(text, "{}, ", move_len).unwrap();
+                    write!(text, "{}, ", diff_back_front).unwrap();
     
                     Rectangle::new(Point::new(10, 21), Size::new(320, 21))
                     .into_styled(fill)
@@ -650,7 +654,7 @@ fn main() -> ! {
                     if event.pressed {
                         unsafe {
                             let running_system = RUNNING_SYSTEM.as_mut().unwrap();
-                            running_system.move_to(vector![0.0_f32, move_len, 0.0_f32]);
+                            running_system.move_to(vector![0.0_f32, 0.0_f32, rotate]);
                         }
                         vehicle_state = VehicleState::PosSet;
                     }
@@ -662,7 +666,13 @@ fn main() -> ! {
                     unsafe {
                         let running_system = RUNNING_SYSTEM.as_mut().unwrap();
                         if running_system.on_moved(moved) {
-                            vehicle_state = VehicleState::Arrive;
+                            let diff_back_front = distances[0] - distances[5];
+                            if diff_back_front.abs() < 1.0_f32 {
+                                vehicle_state = VehicleState::Arrive;
+                            } else {
+                                let rotate = if diff_back_front > 0.0_f32 { 2.0_f32 * PI / 180.0_f32} else { - 2.0_f32 * PI / 180.0_f32};
+                                running_system.move_to(vector![0.0_f32, 0.0_f32, rotate]);
+                            }
                         }
                     }
                 }
