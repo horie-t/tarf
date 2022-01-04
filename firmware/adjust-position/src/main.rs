@@ -688,7 +688,8 @@ fn main() -> ! {
                             let diff_beside = distances[3] - distances[0];
                 
                             if diff_beside.abs() < 1.5_f32 {
-                                vehicle_state = VehicleState::Arrive;
+                                running_system.run(vector![velocity * direction_rad.cos(), velocity * direction_rad.sin(), 0.0_f32]);
+                                vehicle_state = VehicleState::Path1;
                             } else {
                                 let move_len = if diff_beside > 0.0_f32 { 0.5_f32 } else { - 0.5_f32 };
                                 running_system.move_to(vector![0.0_f32, move_len, 0.0_f32]);
@@ -698,21 +699,21 @@ fn main() -> ! {
                 }
             },
             VehicleState::Path1 => {
-                if let Some(moved) = wheel_event_queue.dequeue() {
+                if let Some(_moved) = wheel_event_queue.dequeue() {
                     step_count += 1;
-                    unsafe {
-                        let running_system = RUNNING_SYSTEM.as_mut().unwrap();
-                        position += running_system.wheel_step_to_vec(moved);
+                    // unsafe {
+                    //     let running_system = RUNNING_SYSTEM.as_mut().unwrap();
+                    //     position += running_system.wheel_step_to_vec(moved);
 
-                        // 時々、方向を調整する。
-                        if step_count % 128 == 0 {
-                            let beside_diff = distances[2] - distances[0];
-                            let rotate_diff = distances[5] - distances[0];
-                            running_system.run(vector![velocity * direction_rad.cos(),
-                                velocity * direction_rad.sin() + 0.2_f32 * beside_diff,
-                                0.02_f32 * rotate_diff]);
-                        }
-                    }
+                    //     // 時々、方向を調整する。
+                    //     if step_count % 128 == 0 {
+                    //         let beside_diff = distances[2] - distances[0];
+                    //         let rotate_diff = distances[5] - distances[0];
+                    //         running_system.run(vector![velocity * direction_rad.cos(),
+                    //             velocity * direction_rad.sin() + 0.2_f32 * beside_diff,
+                    //             0.02_f32 * rotate_diff]);
+                    //     }
+                    // }
 
                     // 壁が近づいたら到着
                     if distances[1] < 30.0_f32 {
