@@ -2,6 +2,10 @@
 
 移動を開始する前に、マス目の中心からスタートするように調整します。
 
+
+https://user-images.githubusercontent.com/10256609/148043124-cc7669bf-578c-40f9-b65d-59211cb886e0.mp4
+
+
 ## 使用パーツ
 
 * [Wio Terminal](https://www.switch-science.com/catalog/6360/)
