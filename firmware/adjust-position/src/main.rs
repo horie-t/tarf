@@ -231,7 +231,7 @@ impl <S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1: Count16, S2: 
             vector![0.0_f32, 0.0_f32, rotate_v]
         } else {
             let trans_normalized = target_point.xy().normalize();
-            vector![25.0_f32 * trans_normalized.x, 25.0_f32 * trans_normalized.y, rotate_v]
+            vector![20.0_f32 * trans_normalized.x, 20.0_f32 * trans_normalized.y, rotate_v]
         };
 
         self.run(v);
@@ -464,7 +464,8 @@ static mut EVENT_QUEUE: Queue<SensorEvent, U16> = Queue(heapless::i::Queue::new(
 
 enum VehicleState {
     Idle,
-    PosSet,
+    AdjustDir,
+    AdjustCenter,
     Path1,
     Arrive,
 }
@@ -631,13 +632,9 @@ fn main() -> ! {
         match vehicle_state {
             VehicleState::Idle => {
                 if let Some(event) = start_event_queue.dequeue() {
-                    let len = 111.0_f32 + distances[3] + distances[0];
-                    let diff_beside = distances[3] - distances[0];
-
                     let diff_back_front = distances[0] - distances[5];
                     let rotate = if diff_back_front > 0.0_f32 { 2.0_f32 * PI / 180.0_f32} else { - 2.0_f32 * PI / 180.0_f32};
 
-                    let move_len = (diff_beside * 168.0_f32 / len) / 2.0_f32;
                     let mut text: String<U40> = String::new();
                     write!(text, "{}, ", diff_back_front).unwrap();
     
@@ -656,11 +653,11 @@ fn main() -> ! {
                             let running_system = RUNNING_SYSTEM.as_mut().unwrap();
                             running_system.move_to(vector![0.0_f32, 0.0_f32, rotate]);
                         }
-                        vehicle_state = VehicleState::PosSet;
+                        vehicle_state = VehicleState::AdjustDir;
                     }
                 }
             },
-            VehicleState::PosSet => {
+            VehicleState::AdjustDir => {
                 if let Some(moved) = wheel_event_queue.dequeue() {
                     step_count += 1;
                     unsafe {
@@ -668,10 +665,33 @@ fn main() -> ! {
                         if running_system.on_moved(moved) {
                             let diff_back_front = distances[0] - distances[5];
                             if diff_back_front.abs() < 1.0_f32 {
-                                vehicle_state = VehicleState::Arrive;
+                                let len = 111.0_f32 + distances[3] + distances[0];
+                                let diff_beside = distances[3] - distances[0];
+            
+                                let move_len = (diff_beside * 168.0_f32 / len) / 2.0_f32;
+                                running_system.move_to(vector![0.0_f32, move_len, 0.0_f32]);
+                                vehicle_state = VehicleState::AdjustCenter;
                             } else {
                                 let rotate = if diff_back_front > 0.0_f32 { 2.0_f32 * PI / 180.0_f32} else { - 2.0_f32 * PI / 180.0_f32};
                                 running_system.move_to(vector![0.0_f32, 0.0_f32, rotate]);
+                            }
+                        }
+                    }
+                }
+            },
+            VehicleState::AdjustCenter => {
+                if let Some(moved) = wheel_event_queue.dequeue() {
+                    step_count += 1;
+                    unsafe {
+                        let running_system = RUNNING_SYSTEM.as_mut().unwrap();
+                        if running_system.on_moved(moved) {
+                            let diff_beside = distances[3] - distances[0];
+                
+                            if diff_beside.abs() < 1.5_f32 {
+                                vehicle_state = VehicleState::Arrive;
+                            } else {
+                                let move_len = if diff_beside > 0.0_f32 { 0.5_f32 } else { - 0.5_f32 };
+                                running_system.move_to(vector![0.0_f32, move_len, 0.0_f32]);
                             }
                         }
                     }
