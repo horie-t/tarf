@@ -202,12 +202,8 @@ fn main() -> ! {
     configurable_eic.finalize();
 
     let mut vehicle_state = VehicleState::Idle;
-    let mut position = Vector3::<f32>::zeros();
     let velocity = 50.0_f32;
     let direction_rad = PI;
-
-    // ホイールのステップ回数
-    let mut step_count = 1;
 
     loop {
         // センサ情報を取得
@@ -248,7 +244,6 @@ fn main() -> ! {
             },
             VehicleState::AdjustDir => {
                 if let Some(moved) = wheel_event_queue.dequeue() {
-                    step_count += 1;
                     unsafe {
                         let running_system = RUNNING_SYSTEM.as_mut().unwrap();
                         if running_system.on_moved(moved) {
@@ -270,7 +265,6 @@ fn main() -> ! {
             },
             VehicleState::AdjustCenter => {
                 if let Some(moved) = wheel_event_queue.dequeue() {
-                    step_count += 1;
                     unsafe {
                         let running_system = RUNNING_SYSTEM.as_mut().unwrap();
                         if running_system.on_moved(moved) {
@@ -289,21 +283,6 @@ fn main() -> ! {
             },
             VehicleState::Path1 => {
                 if let Some(_moved) = wheel_event_queue.dequeue() {
-                    step_count += 1;
-                    // unsafe {
-                    //     let running_system = RUNNING_SYSTEM.as_mut().unwrap();
-                    //     position += running_system.wheel_step_to_vec(moved);
-
-                    //     // 時々、方向を調整する。
-                    //     if step_count % 128 == 0 {
-                    //         let beside_diff = distances[2] - distances[0];
-                    //         let rotate_diff = distances[5] - distances[0];
-                    //         running_system.run(vector![velocity * direction_rad.cos(),
-                    //             velocity * direction_rad.sin() + 0.2_f32 * beside_diff,
-                    //             0.02_f32 * rotate_diff]);
-                    //     }
-                    // }
-
                     // 壁が近づいたら到着
                     if distances[1] < 30.0_f32 {
                         unsafe {
@@ -330,7 +309,6 @@ fn main() -> ! {
                     character_style)
                 .draw(&mut display).unwrap();
 
-                position = Vector3::zeros();
                 vehicle_state = VehicleState::Idle;
             }
         }
