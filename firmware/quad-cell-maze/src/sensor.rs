@@ -1,21 +1,18 @@
 use cortex_m::peripheral::NVIC;
 
 use vl53l0x::VL53L0x;
-use xca9548a::{I2cSlave, SlaveAddr, Xca9548a};
-
+use xca9548a::{I2cSlave, Xca9548a};
 
 use wio_terminal as wio;
-
-use wio::hal::common::eic;
-use wio::hal::common::eic::pin::{ExtInt4, ExtInt6, ExtInt7, ExtInt10, ExtInt12, ExtInt13, ExtInt14, ExternalInterrupt, Sense};
+use wio::hal::common::eic::pin::{ExtInt4, ExtInt6, ExtInt7, ExtInt12, ExtInt13, ExtInt14, Sense};
 use wio::hal::eic::ConfigurableEIC;
 use wio::hal::gpio;
-use wio::hal::gpio::v1::{Port, Pa4, Pa16, Pa17, Pa6, Pb7, Pb12, Pb13, Pb14, Pc26, PfD};
-use wio::hal::gpio::v2::{Alternate, D, Floating, Input, Interrupt, Output, PA07, PA16, PA17, PB04, PB05, PB06, PB08, PB09, Pin, PinId, PushPull};
+use wio::hal::gpio::v1::{Port, Pa4, Pa6, Pb7, Pb12, Pb13, Pb14};
+use wio::hal::gpio::v2::{Alternate, D, Floating, Input, Interrupt, PA16, PA17};
 use wio::hal::sercom::v2::{Pad0, Pad1};
 use wio::hal::sercom::Pad;
-use wio::hal::sercom::{I2CMaster3, PadPin, Sercom3Pad0, Sercom3Pad1};
-use wio::pac::{CorePeripherals, Peripherals, SERCOM3, TC2, TC3, TC4, interrupt};
+use wio::hal::sercom::I2CMaster3;
+use wio::pac::{SERCOM3, interrupt};
 use wio::prelude::*;
 
 

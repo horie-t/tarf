@@ -5,13 +5,12 @@ use core::f32::consts::{PI, FRAC_PI_2, FRAC_PI_3, FRAC_PI_4, FRAC_PI_6, FRAC_PI_
 use core::fmt::Write;
 
 use cortex_m::interrupt::free as disable_interrupts;
-use cortex_m::peripheral::NVIC;
 use heapless::String;
-use heapless::consts::{U8, U16, U40};
+use heapless::consts::*;
 use heapless::spsc::Queue;
 use micromath::F32Ext;
 use vl53l0x::VL53L0x;
-use xca9548a::{I2cSlave, SlaveAddr, Xca9548a};
+use xca9548a::{SlaveAddr, Xca9548a};
 
 use panic_halt as _;
 
@@ -22,24 +21,18 @@ use embedded_graphics::primitives::{Rectangle, PrimitiveStyle};
 use embedded_graphics::text::Text;
 
 use nalgebra as na;
-use na::{Matrix3, Vector3, matrix, vector, Vector2};
-use na::base::SVector;
+use na::{Vector3, matrix, vector};
 
-use wio::hal::eic::ConfigurableEIC;
 use wio_terminal as wio;
 use wio::{entry, Display, Pins};
 use wio::hal::clock::GenericClockController;
 use wio::hal::delay::Delay;
 use wio::hal::common::eic;
-use wio::hal::common::eic::pin::{ExtInt4, ExtInt6, ExtInt7, ExtInt10, ExtInt12, ExtInt13, ExtInt14, ExternalInterrupt, Sense};
-use wio::hal::gpio;
-use wio::hal::gpio::v1::{Port, Pa4, Pa16, Pa17, Pa6, Pb7, Pb12, Pb13, Pb14, Pc26, PfD};
-use wio::hal::gpio::v2::{Alternate, D, Floating, Input, Interrupt, Output, PA07, PA16, PA17, PB04, PB05, PB06, PB08, PB09, Pin, PinId, PushPull};
-use wio::hal::sercom::v2::{Pad0, Pad1};
-use wio::hal::sercom::Pad;
+use wio::hal::gpio::v1::{Pa16, Pa17, PfD};
+use wio::hal::gpio::v2::{PA07, PB04, PB05, PB06, PB08, PB09};
 use wio::hal::sercom::{I2CMaster3, PadPin, Sercom3Pad0, Sercom3Pad1};
-use wio::hal::timer::{Count16, TimerCounter};
-use wio::pac::{CorePeripherals, Peripherals, SERCOM3, TC2, TC3, TC4, interrupt};
+use wio::hal::timer::TimerCounter;
+use wio::pac::{CorePeripherals, Peripherals, TC2, TC3, TC4, interrupt};
 use wio::prelude::*;
 
 mod console;
