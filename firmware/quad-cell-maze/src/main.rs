@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 
+use bitfield::bitfield;
 use core::f32::consts::{PI, FRAC_PI_2, FRAC_PI_3, FRAC_PI_4, FRAC_PI_6, FRAC_PI_8};
 use core::fmt::Write;
 
@@ -43,6 +44,22 @@ use runningsystem::{RunningSystem, Wheel, WheelMovedEvent, WheelRotateDirection}
 
 mod sensor;
 use sensor::{SensorEvent, SensorI2C, TofSensors};
+
+/*
+ * 迷路関連
+ */
+bitfield! {
+    #[derive(Clone, Copy)]
+    pub struct MazeCell(u8);
+    pub north, set_north: 7, 6;
+    pub east, set_east: 5, 4;
+    pub south, set_south: 3, 2;
+    pub west, set_west: 1, 0;
+}
+const NO_WALL: u8 = 0;
+const WALL: u8 = 1;
+const UNKNOWN_WALL: u8 = 3;
+
 
 static mut WHEEL_MOVED_EVENT_QUEUE: Queue<WheelMovedEvent, U16> = Queue(heapless::i::Queue::new());
 static mut RUNNING_SYSTEM: Option<RunningSystem<PB08, PB09, TC2, PA07, PB04, TC3, PB05, PB06, TC4>> = None;
@@ -197,6 +214,9 @@ fn main() -> ! {
     let mut consumer = unsafe { EVENT_QUEUE.split().1 };
     let mut distances = [0_f32; 6];
     let calibration_values = [17.2_f32, 5.9_f32, 4.1_f32, 4.2_f32, 7.13_f32, 22.6_f32];
+
+    // 迷路の初期化
+    let mut maze = [[MazeCell(0xFFu8); 2]; 2];
 
     // 初期化の後処理
     configurable_eic.finalize();
