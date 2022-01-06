@@ -1,17 +1,16 @@
-use core::f32::consts::{PI, FRAC_PI_2, FRAC_PI_3, FRAC_PI_4, FRAC_PI_6, FRAC_PI_8};
+use core::f32::consts::{PI, FRAC_PI_3, FRAC_PI_8};
 
 use cortex_m::peripheral::NVIC;
 use micromath::F32Ext;
 
 use nalgebra as na;
-use na::{Matrix3, Vector3, matrix, vector, Vector2};
+use na::{Matrix3, Vector3, vector, Vector2};
 use na::base::SVector;
 
-
 use wio_terminal as wio;
-use wio::hal::gpio::v2::{Alternate, D, Floating, Input, Interrupt, Output, PA07, PA16, PA17, PB04, PB05, PB06, PB08, PB09, Pin, PinId, PushPull};
+use wio::hal::gpio::v2::{Floating, Input, Output, Pin, PinId, PushPull};
 use wio::hal::timer::{Count16, TimerCounter};
-use wio::pac::{CorePeripherals, Peripherals, SERCOM3, TC2, TC3, TC4, interrupt};
+use wio::pac::interrupt;
 use wio::prelude::*;
 
 /* 
