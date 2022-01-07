@@ -60,6 +60,22 @@ const NO_WALL: u8 = 0;
 const WALL: u8 = 1;
 const UNKNOWN_WALL: u8 = 3;
 
+const CELL_____: MazeCell = MazeCell(0b00000000);
+const CELL_N___: MazeCell = MazeCell(0b01000000);
+const CELL__E__: MazeCell = MazeCell(0b00010000);
+const CELL_NE__: MazeCell = MazeCell(0b01010000);
+const CELL___S_: MazeCell = MazeCell(0b00000100);
+const CELL_N_S_: MazeCell = MazeCell(0b01000100);
+const CELL__ES_: MazeCell = MazeCell(0b00010100);
+const CELL_NES_: MazeCell = MazeCell(0b01010100);
+const CELL____W: MazeCell = MazeCell(0b00000001);
+const CELL_N__W: MazeCell = MazeCell(0b01000001);
+const CELL__E_W: MazeCell = MazeCell(0b00010001);
+const CELL_NE_W: MazeCell = MazeCell(0b01010001);
+const CELL___SW: MazeCell = MazeCell(0b00000101);
+const CELL_N_SW: MazeCell = MazeCell(0b01000101);
+const CELL__ESW: MazeCell = MazeCell(0b00010101);
+const CELL_NESW: MazeCell = MazeCell(0b01010101);
 
 static mut WHEEL_MOVED_EVENT_QUEUE: Queue<WheelMovedEvent, U16> = Queue(heapless::i::Queue::new());
 static mut RUNNING_SYSTEM: Option<RunningSystem<PB08, PB09, TC2, PA07, PB04, TC3, PB05, PB06, TC4>> = None;
@@ -215,8 +231,15 @@ fn main() -> ! {
     let mut distances = [0_f32; 6];
     let calibration_values = [17.2_f32, 5.9_f32, 4.1_f32, 4.2_f32, 7.13_f32, 22.6_f32];
 
-    // 迷路の初期化
-    let mut maze = [[MazeCell(0xFFu8); 2]; 2];
+    // 迷路の初期化(探索してないけどマッピングは終了していることにする)
+    let maze = [[CELL_N__W, CELL_NE__],[CELL__ESW, CELL__ESW]];
+    let links = [
+        (vector![0.0_f32, 1.0_f32], vector![0.0_f32, 0.0_f32]),
+        (vector![0.0_f32, 0.0_f32], vector![1.0_f32, 0.0_f32]),
+        (vector![1.0_f32, 0.0_f32], vector![1.0_f32, 1.0_f32])
+        ];
+    // スタート時点のリンクは0番目
+    let mut link_index = 0;
 
     // 初期化の後処理
     configurable_eic.finalize();
