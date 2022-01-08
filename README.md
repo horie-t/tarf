@@ -83,7 +83,7 @@ Firmware
 | 17       | [TOF 距離センサで連続測定モード](./firmware/tof-sensor-interrupt/)で測定する。      |
 | 18       | [2マスの直線だけの迷路](./firmware/straight-line-maze/)を走行する。                 |
 | 19       | [L字型迷路](./firmware/l-shaped-maze/)をデッド・レコニングで走行する。              |
-| 20       | [長い直線迷路](./firmware/long-strait-maze/)を補正しながら走行する。                |
+| 20       | [長い直線迷路](./firmware/long-straight-maze/)を補正しながら走行する。              |
 | 21       | [スタート位置で向きと位置を調整](./firmware/adjust-position/)してから走行する。     |
 
 
