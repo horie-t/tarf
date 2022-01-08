@@ -3,6 +3,10 @@
 4つのマス目の迷路を進みます。
 設定されたルートに従って、地図データに合わせてゴールに向かいます。
 
+
+https://user-images.githubusercontent.com/10256609/148628790-4f92eaa5-c205-4d58-8d8b-c9a0188d8da2.mp4
+
+
 ## 使用パーツ
 
 * [Wio Terminal](https://www.switch-science.com/catalog/6360/)
