@@ -89,7 +89,8 @@ enum VehicleState {
     Idle,
     AdjustDir,
     AdjustCenter,
-    Path1,
+    Run,
+    Turn,
     Arrive,
 }
 
@@ -246,7 +247,6 @@ fn main() -> ! {
 
     let mut vehicle_state = VehicleState::Idle;
     let velocity = 50.0_f32;
-    let direction_rad = PI;
 
     loop {
         // センサ情報を取得
@@ -314,8 +314,8 @@ fn main() -> ! {
                             let diff_beside = distances[3] - distances[0];
                 
                             if diff_beside.abs() < 1.5_f32 {
-                                running_system.run(vector![velocity * direction_rad.cos(), velocity * direction_rad.sin(), 0.0_f32]);
-                                vehicle_state = VehicleState::Path1;
+                                running_system.run(vector![- velocity, 0.0_f32, 0.0_f32]);
+                                vehicle_state = VehicleState::Run;
                             } else {
                                 let move_len = if diff_beside > 0.0_f32 { 0.5_f32 } else { - 0.5_f32 };
                                 running_system.move_to(vector![0.0_f32, move_len, 0.0_f32]);
@@ -324,23 +324,80 @@ fn main() -> ! {
                     }
                 }
             },
-            VehicleState::Path1 => {
+            VehicleState::Run => {
                 if let Some(_moved) = wheel_event_queue.dequeue() {
-                    // 壁が近づいたら到着
                     if distances[1] < 30.0_f32 {
-                        unsafe {
-                            let running_system = RUNNING_SYSTEM.as_mut().unwrap();
-                            running_system.stop();
+                        // 壁が近づいたら
+                        if link_index == links.len() - 1 {
+                            // ゴールに到着
+                            unsafe {
+                                let running_system = RUNNING_SYSTEM.as_mut().unwrap();
+                                running_system.stop();
+                            }
+                            vehicle_state = VehicleState::Arrive;
+                        } else {
+                            // 次のリンクを走行開始
+                            let current_link = links[link_index];
+                            let current_link_vec = (current_link.1 - current_link.0).normalize();
+                            let next_link = links[link_index + 1];
+                            let next_link_vec = (next_link.1 - next_link.0).normalize();
+                            let dot = current_link_vec.dotc(&next_link_vec);
+                            let det = next_link_vec.perp(&current_link_vec);
+                            let rad = det.atan2(dot);
+
+                            let mut text: String<U40> = String::new();
+                            write!(text, "Turn {}, ", rad).unwrap();
+            
+                            Rectangle::new(Point::new(10, 21), Size::new(320, 21))
+                            .into_styled(fill)
+                            .draw(&mut display).unwrap();
+                    
+                            Text::new(
+                                text.as_str(),
+                                Point::new(10, 40),
+                                character_style)
+                            .draw(&mut display).unwrap();
+        
+                            unsafe {
+                                let running_system = RUNNING_SYSTEM.as_mut().unwrap();
+                                running_system.move_to(vector![0.0_f32, 0.0_f32, rad]);
+                            }
+
+                            vehicle_state = VehicleState::Turn;
                         }
-                        vehicle_state = VehicleState::Arrive;
+                    }
+                }
+            },
+            VehicleState::Turn => {
+                if let Some(moved) = wheel_event_queue.dequeue() {
+                    unsafe {
+                        let running_system = RUNNING_SYSTEM.as_mut().unwrap();
+                        if running_system.on_moved(moved) {
+                            let mut text: String<U40> = String::new();
+                            for distance in distances.iter() {
+                                write!(text, "{}, ", (*distance as i16)).unwrap();
+                            }
+
+                            Rectangle::new(Point::new(10, 21), Size::new(320, 21))
+                            .into_styled(fill)
+                            .draw(&mut display).unwrap();
+                    
+                            Text::new(
+                                text.as_str(),
+                                Point::new(10, 40),
+                                character_style)
+                            .draw(&mut display).unwrap();
+
+                            running_system.run(vector![- velocity, 0.0_f32, 0.0_f32]);
+                            link_index += 1;
+                            vehicle_state = VehicleState::Run;
+                        }
                     }
                 }
             },
             VehicleState::Arrive => {
                 let mut text: String<U40> = String::new();
-                for distance in distances.iter() {
-                    write!(text, "{}, ", (*distance as i16)).unwrap();
-                }
+                write!(text, "Arrive!").unwrap();
 
                 Rectangle::new(Point::new(10, 21), Size::new(320, 21))
                 .into_styled(fill)
@@ -352,6 +409,7 @@ fn main() -> ! {
                     character_style)
                 .draw(&mut display).unwrap();
 
+                link_index = 0;
                 vehicle_state = VehicleState::Idle;
             }
         }

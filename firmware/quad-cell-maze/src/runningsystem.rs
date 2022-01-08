@@ -213,7 +213,8 @@ impl <S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1: Count16, S2: 
         } else if distance < 1.0_f32 {
             self.run(vector![0.0_f32, 0.0_f32, self.velocity.z]);
         } else if diff_angle < (PI / 90.0_f32) {
-            self.run(vector![self.velocity.x, self.velocity.y, 0.0_f32]);
+            let trans_normalized = (self.target_point.xy() - self.trip_vec.xy()).normalize();
+            self.run(vector![20.0_f32 * trans_normalized.x, 20.0_f32 * trans_normalized.y, 0.0_f32]);
         }
 
         false
