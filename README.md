@@ -85,7 +85,7 @@ Firmware
 | 19       | [L字型迷路](./firmware/l-shaped-maze/)をデッド・レコニングで走行する。              |
 | 20       | [長い直線迷路](./firmware/long-straight-maze/)を補正しながら走行する。              |
 | 21       | [スタート位置で向きと位置を調整](./firmware/adjust-position/)してから走行する。     |
-
+| 21       | [4マスの迷路](./firmware/quad-cell-maze/)を走行する。                               |
 
 Body
 
