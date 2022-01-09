@@ -206,15 +206,14 @@ impl <S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1: Count16, S2: 
         self.trip_vec += self.wheel_step_to_vec(moved_event);
         let distance = (self.target_point.xy() - self.trip_vec.xy()).magnitude();
         let diff_angle = (self.target_point.z - self.trip_vec.z).abs();
-        if distance < 1.0_f32 && diff_angle < (PI / 90.0_f32) {
+        if distance < 2.0_f32 && diff_angle < (PI / 180.0_f32) {
             // 目的地に到着
             self.stop();
             return true
-        } else if distance < 1.0_f32 {
+        } else if distance < 2.0_f32 {
             self.run(vector![0.0_f32, 0.0_f32, self.velocity.z]);
-        } else if diff_angle < (PI / 90.0_f32) {
-            let trans_normalized = (self.target_point.xy() - self.trip_vec.xy()).normalize();
-            self.run(vector![20.0_f32 * trans_normalized.x, 20.0_f32 * trans_normalized.y, 0.0_f32]);
+        } else if diff_angle < (PI / 180.0_f32) {
+            self.run(vector![self.velocity.x, self.velocity.y, 0.0_f32]);
         }
 
         false
