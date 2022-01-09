@@ -299,7 +299,7 @@ fn main() -> ! {
                                 running_system.move_to(vector![0.0_f32, move_len, 0.0_f32]);
                                 vehicle_state = VehicleState::AdjustCenter;
                             } else {
-                                let rotate = if diff_back_front > 0.0_f32 { 2.0_f32 * PI / 180.0_f32} else { - 2.0_f32 * PI / 180.0_f32};
+                                let rotate = if diff_back_front > 0.0_f32 { PI / 180.0_f32} else { PI / 180.0_f32};
                                 running_system.move_to(vector![0.0_f32, 0.0_f32, rotate]);
                             }
                         }
