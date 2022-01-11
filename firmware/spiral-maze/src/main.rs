@@ -344,7 +344,7 @@ fn main() -> ! {
                             let next_link = links[link_index + 1];
                             let next_link_vec = (next_link.1 - next_link.0).normalize();
                             let dot = current_link_vec.dotc(&next_link_vec);
-                            let det = current_link.perp(&next_link);
+                            let det = current_link_vec.perp(&next_link_vec);
                             let rad = det.atan2(dot);
 
                             let mut text: String<U40> = String::new();
