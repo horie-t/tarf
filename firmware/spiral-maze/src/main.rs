@@ -232,11 +232,13 @@ fn main() -> ! {
     let mut distances = [0_f32; 6];
     let calibration_values = [17.2_f32, 5.9_f32, 4.1_f32, 4.2_f32, 7.13_f32, 22.6_f32];
 
-    // 迷路の初期化(探索してないけどマッピングは終了していることにする)
-    let maze = [[CELL_N__W, CELL_NE__],[CELL__ESW, CELL__ESW]];
+    // ルートの初期化(探索してないけどマッピングは終了していることにする)
+    // 左下を原点とする。
     let links = [
-        (vector![0.0_f32, 1.0_f32], vector![0.0_f32, 0.0_f32]),
-        (vector![0.0_f32, 0.0_f32], vector![1.0_f32, 0.0_f32]),
+        (vector![0.0_f32, 0.0_f32], vector![0.0_f32, 2.0_f32]),
+        (vector![0.0_f32, 2.0_f32], vector![2.0_f32, 2.0_f32]),
+        (vector![2.0_f32, 2.0_f32], vector![2.0_f32, 0.0_f32]),
+        (vector![2.0_f32, 0.0_f32], vector![1.0_f32, 0.0_f32]),
         (vector![1.0_f32, 0.0_f32], vector![1.0_f32, 1.0_f32])
         ];
     // スタート時点のリンクは0番目
@@ -342,7 +344,7 @@ fn main() -> ! {
                             let next_link = links[link_index + 1];
                             let next_link_vec = (next_link.1 - next_link.0).normalize();
                             let dot = current_link_vec.dotc(&next_link_vec);
-                            let det = next_link_vec.perp(&current_link_vec);
+                            let det = current_link.perp(&next_link);
                             let rad = det.atan2(dot);
 
                             let mut text: String<U40> = String::new();
