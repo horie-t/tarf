@@ -25,7 +25,7 @@ use nalgebra as na;
 use na::{Vector3, matrix, vector};
 
 use wio_terminal as wio;
-use wio::{entry, Display, Pins};
+use wio::{entry, Display, LCD, Pins};
 use wio::hal::clock::GenericClockController;
 use wio::hal::delay::Delay;
 use wio::hal::common::eic;
@@ -76,6 +76,38 @@ const CELL___SW: MazeCell = MazeCell(0b00000101);
 const CELL_N_SW: MazeCell = MazeCell(0b01000101);
 const CELL__ESW: MazeCell = MazeCell(0b00010101);
 const CELL_NESW: MazeCell = MazeCell(0b01010101);
+
+fn clear_display(display: &mut LCD) {
+    // 背景を黒にする
+    let fill = PrimitiveStyle::with_fill(Rgb565::BLACK);
+    display
+        .bounding_box()
+        .into_styled(fill)
+        .draw(display).unwrap();
+
+    // 文字を表示
+    let character_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
+    Text::new(
+        "Hello, Tarf!",
+        Point::new(10, 20),
+        character_style)
+    .draw(display).unwrap();
+}
+
+fn println_display(display: &mut LCD, text: &str) {
+    let fill = PrimitiveStyle::with_fill(Rgb565::BLACK);
+    Rectangle::new(Point::new(10, 21), Size::new(320, 21))
+    .into_styled(fill)
+    .draw(display).unwrap();
+
+    let character_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
+    Text::new(
+        text,
+        Point::new(10, 40),
+        character_style)
+    .draw(display).unwrap();
+}
+
 
 static mut WHEEL_MOVED_EVENT_QUEUE: Queue<WheelMovedEvent, U16> = Queue(heapless::i::Queue::new());
 static mut RUNNING_SYSTEM: Option<RunningSystem<PB08, PB09, TC2, PA07, PB04, TC3, PB05, PB06, TC4>> = None;
@@ -171,21 +203,7 @@ fn main() -> ! {
         backlight: pins.lcd_backlight
     }).init(&mut clocks, peripherals.SERCOM7, &mut peripherals.MCLK, &mut pins.port, 58.mhz(), &mut delay)
     .ok().unwrap();
-
-    // 背景を黒にする
-    let fill = PrimitiveStyle::with_fill(Rgb565::BLACK);
-    display
-        .bounding_box()
-        .into_styled(fill)
-        .draw(&mut display).unwrap();
-
-    // 文字を表示
-    let character_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
-    Text::new(
-        "Hello, Tarf!",
-        Point::new(10, 20),
-        character_style)
-    .draw(&mut display).unwrap();    
+    clear_display(&mut display);
 
     // センサの初期化
     let i2c: I2CMaster3<Sercom3Pad0<Pa17<PfD>>, Sercom3Pad1<Pa16<PfD>>> = I2CMaster3::new(
@@ -267,16 +285,7 @@ fn main() -> ! {
 
                     let mut text: String<U40> = String::new();
                     write!(text, "{}, ", diff_back_front).unwrap();
-    
-                    Rectangle::new(Point::new(10, 21), Size::new(320, 21))
-                    .into_styled(fill)
-                    .draw(&mut display).unwrap();
-            
-                    Text::new(
-                        text.as_str(),
-                        Point::new(10, 40),
-                        character_style)
-                    .draw(&mut display).unwrap();
+                    println_display(&mut display, text.as_str());
 
                     if event.pressed {
                         unsafe {
@@ -349,16 +358,7 @@ fn main() -> ! {
 
                             let mut text: String<U40> = String::new();
                             write!(text, "Turn {}, ", rad).unwrap();
-            
-                            Rectangle::new(Point::new(10, 21), Size::new(320, 21))
-                            .into_styled(fill)
-                            .draw(&mut display).unwrap();
-                    
-                            Text::new(
-                                text.as_str(),
-                                Point::new(10, 40),
-                                character_style)
-                            .draw(&mut display).unwrap();
+                            println_display(&mut display, text.as_str());
         
                             unsafe {
                                 let running_system = RUNNING_SYSTEM.as_mut().unwrap();
@@ -379,16 +379,7 @@ fn main() -> ! {
                             for distance in distances.iter() {
                                 write!(text, "{}, ", (*distance as i16)).unwrap();
                             }
-
-                            Rectangle::new(Point::new(10, 21), Size::new(320, 21))
-                            .into_styled(fill)
-                            .draw(&mut display).unwrap();
-                    
-                            Text::new(
-                                text.as_str(),
-                                Point::new(10, 40),
-                                character_style)
-                            .draw(&mut display).unwrap();
+                            println_display(&mut display, text.as_str());
 
                             running_system.run(vector![- velocity, 0.0_f32, 0.0_f32]);
                             link_index += 1;
@@ -400,16 +391,7 @@ fn main() -> ! {
             VehicleState::Arrive => {
                 let mut text: String<U40> = String::new();
                 write!(text, "Arrive!").unwrap();
-
-                Rectangle::new(Point::new(10, 21), Size::new(320, 21))
-                .into_styled(fill)
-                .draw(&mut display).unwrap();
-        
-                Text::new(
-                    text.as_str(),
-                    Point::new(10, 40),
-                    character_style)
-                .draw(&mut display).unwrap();
+                println_display(&mut display, text.as_str());
 
                 link_index = 0;
                 vehicle_state = VehicleState::Idle;
