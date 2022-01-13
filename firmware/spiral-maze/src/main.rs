@@ -153,9 +153,9 @@ fn main() -> ! {
     
     // 走行装置の初期化
     let wheel_mat = matrix![
-        - 3.0_f32.sqrt() / 2.0_f32, - 0.5_f32, 49.0_f32;
-          0.0_f32,                    1.0_f32, 49.0_f32;
-          3.0_f32.sqrt() / 2.0_f32, - 0.5_f32, 49.0_f32;
+        - 3.0_f32.sqrt() / 2.0_f32, - 0.5_f32, 52.0_f32;
+          0.0_f32,                    1.0_f32, 52.0_f32;
+          3.0_f32.sqrt() / 2.0_f32, - 0.5_f32, 52.0_f32;
     ];
     let running_system = RunningSystem {
         wheel_0: Wheel::new(0, pins.a0_d0.into(), pins.a1_d1.into(),
@@ -375,11 +375,11 @@ fn main() -> ! {
                     unsafe {
                         let running_system = RUNNING_SYSTEM.as_mut().unwrap();
                         if running_system.on_moved(moved) {
-                            let mut text: String<U40> = String::new();
-                            for distance in distances.iter() {
-                                write!(text, "{}, ", (*distance as i16)).unwrap();
-                            }
-                            println_display(&mut display, text.as_str());
+                            // let mut text: String<U40> = String::new();
+                            // for distance in distances.iter() {
+                            //     write!(text, "{}, ", (*distance as i16)).unwrap();
+                            // }
+                            // println_display(&mut display, text.as_str());
 
                             running_system.run(vector![0.0_f32, velocity, 0.0_f32]);
                             link_index += 1;
