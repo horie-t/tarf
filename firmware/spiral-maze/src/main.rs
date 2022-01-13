@@ -153,9 +153,9 @@ fn main() -> ! {
     
     // 走行装置の初期化
     let wheel_mat = matrix![
-        0.5_f32, - 3.0_f32.sqrt() / 2.0_f32, 49.0_f32;
-      - 1.0_f32,   0.0_f32                 , 49.0_f32;
-        0.5_f32,   3.0_f32.sqrt() / 2.0_f32, 49.0_f32;
+        - 3.0_f32.sqrt() / 2.0_f32, - 0.5_f32, 49.0_f32;
+          0.0_f32,                    1.0_f32, 49.0_f32;
+          3.0_f32.sqrt() / 2.0_f32, - 0.5_f32, 49.0_f32;
     ];
     let running_system = RunningSystem {
         wheel_0: Wheel::new(0, pins.a0_d0.into(), pins.a1_d1.into(),
@@ -307,7 +307,7 @@ fn main() -> ! {
                                 let diff_beside = distances[3] - distances[0];
             
                                 let move_len = (diff_beside * 168.0_f32 / len) / 2.0_f32;
-                                running_system.move_to(vector![0.0_f32, move_len, 0.0_f32]);
+                                running_system.move_to(vector![move_len, 0.0_f32, 0.0_f32]);
                                 vehicle_state = VehicleState::AdjustCenter;
                             } else {
                                 let rotate = if diff_back_front > 0.0_f32 { PI / 180.0_f32} else { PI / 180.0_f32};
@@ -325,11 +325,11 @@ fn main() -> ! {
                             let diff_beside = distances[3] - distances[0];
                 
                             if diff_beside.abs() < 1.5_f32 {
-                                running_system.run(vector![- velocity, 0.0_f32, 0.0_f32]);
+                                running_system.run(vector![0.0_f32, velocity, 0.0_f32]);
                                 vehicle_state = VehicleState::Run;
                             } else {
                                 let move_len = if diff_beside > 0.0_f32 { 0.5_f32 } else { - 0.5_f32 };
-                                running_system.move_to(vector![0.0_f32, move_len, 0.0_f32]);
+                                running_system.move_to(vector![move_len, 0.0_f32, 0.0_f32]);
                             }
                         }
                     }
@@ -381,7 +381,7 @@ fn main() -> ! {
                             }
                             println_display(&mut display, text.as_str());
 
-                            running_system.run(vector![- velocity, 0.0_f32, 0.0_f32]);
+                            running_system.run(vector![0.0_f32, velocity, 0.0_f32]);
                             link_index += 1;
                             vehicle_state = VehicleState::Run;
                         }
