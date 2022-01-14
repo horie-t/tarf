@@ -163,11 +163,11 @@ impl <S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1: Count16, S2: 
                 };
             
             if (direction_rad - FRAC_PI_6).abs() < FRAC_PI_8 {
-                wheels_v[0] = wheels_v[0] * (1.0_f32 - 0.050 * (FRAC_PI_8 - (direction_rad - FRAC_PI_6).abs()) / FRAC_PI_8);
+                wheels_v[0] = wheels_v[0] * (1.0_f32 - 0.075 * (FRAC_PI_8 - (direction_rad - FRAC_PI_6).abs()) / FRAC_PI_8);
             } else if direction_rad.abs() - PI < FRAC_PI_8 {
-                wheels_v[1] = wheels_v[1] * (1.0_f32 - 0.050 * (FRAC_PI_8 - (direction_rad.abs() - PI       )) / FRAC_PI_8);
+                wheels_v[1] = wheels_v[1] * (1.0_f32 - 0.075 * (FRAC_PI_8 - (direction_rad.abs() - PI       )) / FRAC_PI_8);
             } else if (direction_rad + FRAC_PI_6).abs() < FRAC_PI_8 {
-                wheels_v[2] = wheels_v[2] * (1.0_f32 - 0.050 * (FRAC_PI_8 - (direction_rad + FRAC_PI_6).abs()) / FRAC_PI_8);
+                wheels_v[2] = wheels_v[2] * (1.0_f32 - 0.075 * (FRAC_PI_8 - (direction_rad + FRAC_PI_6).abs()) / FRAC_PI_8);
             }
         }
 
