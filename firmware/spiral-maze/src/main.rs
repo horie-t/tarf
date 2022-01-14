@@ -153,9 +153,9 @@ fn main() -> ! {
     
     // 走行装置の初期化
     let wheel_mat = matrix![
-        - 3.0_f32.sqrt() / 2.0_f32, - 0.5_f32, 52.0_f32;
-          0.0_f32,                    1.0_f32, 52.0_f32;
-          3.0_f32.sqrt() / 2.0_f32, - 0.5_f32, 52.0_f32;
+        - 3.0_f32.sqrt() / 2.0_f32, - 0.5_f32, 49.0_f32;
+          0.0_f32,                    1.0_f32, 49.0_f32;
+          3.0_f32.sqrt() / 2.0_f32, - 0.5_f32, 49.0_f32;
     ];
     let running_system = RunningSystem {
         wheel_0: Wheel::new(0, pins.a0_d0.into(), pins.a1_d1.into(),
@@ -248,6 +248,7 @@ fn main() -> ! {
     tof_interrupt!(TOF_SENSORS, sensor5_gpio1, sensor5_i2c, 5u16, EIC_EXTINT_13);
     let mut consumer = unsafe { EVENT_QUEUE.split().1 };
     let mut distances = [0_f32; 6];
+    let mut calibrated_distances = [0_f32; 6];
     let calibration_values = [17.2_f32, 5.9_f32, 4.1_f32, 4.2_f32, 7.13_f32, 22.6_f32];
 
     // ルートの初期化(探索してないけどマッピングは終了していることにする)
@@ -273,7 +274,8 @@ fn main() -> ! {
         if let Some(interrupt_event) = consumer.dequeue() {
             let id = interrupt_event.id as usize;
             let calibrated_distance = interrupt_event.distance as f32 - calibration_values[id];
-            distances[id] = 0.5_f32 * calibrated_distance + 0.5_f32 * distances[id];
+            distances[id] = 0.5_f32 * interrupt_event.distance as f32 + 0.5_f32 * distances[id];
+            calibrated_distances[id] = 0.5_f32 * calibrated_distance + 0.5_f32 * calibrated_distances[id];
         }
 
         // 走行制御
