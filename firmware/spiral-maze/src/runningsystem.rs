@@ -1,4 +1,4 @@
-use core::f32::consts::{PI, FRAC_PI_3, FRAC_PI_8, FRAC_PI_6};
+use core::f32::consts::{PI, FRAC_PI_3, FRAC_PI_8, FRAC_PI_6, FRAC_PI_2};
 
 use cortex_m::peripheral::NVIC;
 use micromath::F32Ext;
@@ -149,25 +149,22 @@ impl <S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1: Count16, S2: 
         let mut wheels_v = self.mat_for_wheel_v * v;
 
         // 車輪の1つが進行方向と同じ向きに回転していると、滑りが発生せずその車輪だけ進み過ぎてしまうのを抑制する。
-        if v.x * v.x + v.y * v.y > 0.0_f32 || v.y != 0.0_f32 {
-            // 超信地旋回ではない、もしくはx軸方向への移動ではない場合
+        if v.xy().magnitude_squared() > 0.0_f32 {
+            // 超信地旋回ではない。
+            let direction_rad = v.y.atan2(v.x);
 
-            // 進行方向が第2, 3象限の場合は、180度回転させた方向で判定しても同じ結果になる
-            let direction_rad = 
-                if v.x > 0.0_f32 {
-                    (v.y / v.x).atan()
-                } else if v.x == 0.0_f32 {
-                    PI
-                } else {
-                    (- v.y / v.x).atan()
-                };
-            
-            if (direction_rad - FRAC_PI_6).abs() < FRAC_PI_8 {
-                wheels_v[0] = wheels_v[0] * (1.0_f32 - 0.075 * (FRAC_PI_8 - (direction_rad - FRAC_PI_6).abs()) / FRAC_PI_8);
-            } else if direction_rad.abs() - PI < FRAC_PI_8 {
-                wheels_v[1] = wheels_v[1] * (1.0_f32 - 0.075 * (FRAC_PI_8 - (direction_rad - PI       ).abs()) / FRAC_PI_8);
+            if (direction_rad - FRAC_PI_2).abs() < FRAC_PI_8 {
+                wheels_v[1] = wheels_v[1] * (1.0_f32 - 0.075 * (FRAC_PI_8 - 0.5_f32 * (direction_rad - FRAC_PI_2).abs()) / FRAC_PI_8);
+            } else if (direction_rad + FRAC_PI_2).abs() < FRAC_PI_8 {
+                wheels_v[1] = wheels_v[1] * (1.0_f32 - 0.075 * (FRAC_PI_8 - 0.5_f32 * (direction_rad + FRAC_PI_2).abs()) / FRAC_PI_8);
+            } else if (direction_rad - FRAC_PI_6).abs() < FRAC_PI_8 {
+                wheels_v[0] = wheels_v[0] * (1.0_f32 - 0.075 * (FRAC_PI_8 - 0.5_f32 * (direction_rad - FRAC_PI_6).abs()) / FRAC_PI_8);
+            } else if (direction_rad + 5.0_f32 * FRAC_PI_6).abs() < FRAC_PI_8 {
+                wheels_v[0] = wheels_v[0] * (1.0_f32 - 0.075 * (FRAC_PI_8 - 0.5_f32 * (direction_rad + 5.0_f32 * FRAC_PI_6).abs()) / FRAC_PI_8);
+            } else if (direction_rad - 5.0_f32 * FRAC_PI_6).abs() < FRAC_PI_8 {
+                wheels_v[2] = wheels_v[2] * (1.0_f32 - 0.075 * (FRAC_PI_8 - 0.5_f32 * (direction_rad - 5.0_f32 *FRAC_PI_6).abs()) / FRAC_PI_8);
             } else if (direction_rad + FRAC_PI_6).abs() < FRAC_PI_8 {
-                wheels_v[2] = wheels_v[2] * (1.0_f32 - 0.075 * (FRAC_PI_8 - (direction_rad + FRAC_PI_6).abs()) / FRAC_PI_8);
+                wheels_v[2] = wheels_v[2] * (1.0_f32 - 0.075 * (FRAC_PI_8 - 0.5_f32 * (direction_rad + FRAC_PI_6).abs()) / FRAC_PI_8);
             }
         }
 
