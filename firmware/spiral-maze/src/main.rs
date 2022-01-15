@@ -269,6 +269,8 @@ fn main() -> ! {
     let mut vehicle_state = VehicleState::Idle;
     let velocity = 50.0_f32;
 
+    let mut moved_count = 0_u64;
+
     loop {
         // センサ情報を取得
         if let Some(interrupt_event) = consumer.dequeue() {
@@ -300,6 +302,8 @@ fn main() -> ! {
             },
             VehicleState::AdjustDir => {
                 if let Some(moved) = wheel_event_queue.dequeue() {
+                    moved_count += 1;
+
                     unsafe {
                         let running_system = RUNNING_SYSTEM.as_mut().unwrap();
                         if running_system.on_moved(moved) {
@@ -321,6 +325,8 @@ fn main() -> ! {
             },
             VehicleState::AdjustCenter => {
                 if let Some(moved) = wheel_event_queue.dequeue() {
+                    moved_count += 1;
+
                     unsafe {
                         let running_system = RUNNING_SYSTEM.as_mut().unwrap();
                         if running_system.on_moved(moved) {
@@ -339,7 +345,9 @@ fn main() -> ! {
             },
             VehicleState::Run => {
                 if let Some(_moved) = wheel_event_queue.dequeue() {
-                    if distances[1] < 30.0_f32 {
+                    moved_count += 1;
+
+                    if distances[1] < 40.0_f32 {
                         // 壁が近づいたら
                         if link_index == links.len() - 1 {
                             // ゴールに到着
@@ -369,20 +377,25 @@ fn main() -> ! {
 
                             vehicle_state = VehicleState::Turn;
                         }
+                    } else if moved_count % (3 * 2) == 0 {
+                        let bias = (distances[0] + distances[5] - 120.0_f32) / 2.0_f32;
+                        if bias.abs() > 1.0_f32 {
+                            unsafe {
+                                let running_system = RUNNING_SYSTEM.as_mut().unwrap();
+                                running_system.run(vector![- bias, velocity, 0.0_f32]);
+                            }
+                        }
                     }
                 }
             },
             VehicleState::Turn => {
                 if let Some(moved) = wheel_event_queue.dequeue() {
+                    moved_count += 1;
+
                     unsafe {
                         let running_system = RUNNING_SYSTEM.as_mut().unwrap();
                         if running_system.on_moved(moved) {
-                            // let mut text: String<U40> = String::new();
-                            // for distance in distances.iter() {
-                            //     write!(text, "{}, ", (*distance as i16)).unwrap();
-                            // }
-                            // println_display(&mut display, text.as_str());
-
+                            println_display(&mut display, "Turned.");
                             running_system.run(vector![0.0_f32, velocity, 0.0_f32]);
                             link_index += 1;
                             vehicle_state = VehicleState::Run;
