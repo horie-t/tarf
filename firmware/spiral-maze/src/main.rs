@@ -123,6 +123,7 @@ enum VehicleState {
     AdjustCenter,
     Run,
     Turn,
+    AdjustTrun,
     Arrive,
 }
 
@@ -377,13 +378,12 @@ fn main() -> ! {
 
                             vehicle_state = VehicleState::Turn;
                         }
-                    } else if moved_count % (3 * 2) == 0 {
+                    } else if moved_count % (3 * 64) == 0 {
                         let bias = (distances[0] + distances[5] - 120.0_f32) / 2.0_f32;
-                        if bias.abs() > 1.0_f32 {
-                            unsafe {
-                                let running_system = RUNNING_SYSTEM.as_mut().unwrap();
-                                running_system.run(vector![- bias, velocity, 0.0_f32]);
-                            }
+                        let rotate_diff = distances[5] - distances[0];
+                        unsafe {
+                            let running_system = RUNNING_SYSTEM.as_mut().unwrap();
+                            running_system.run(vector![- bias, velocity, - 0.02_f32 * rotate_diff]);
                         }
                     }
                 }
@@ -396,6 +396,23 @@ fn main() -> ! {
                         let running_system = RUNNING_SYSTEM.as_mut().unwrap();
                         if running_system.on_moved(moved) {
                             println_display(&mut display, "Turned.");
+
+                            let diff_back_front = distances[0] - distances[5];
+                            let rotate = if diff_back_front > 0.0_f32 { PI / 180.0_f32} else { - PI / 180.0_f32};
+                            running_system.move_to(vector![0.0_f32, 0.0_f32, rotate]);
+                            vehicle_state = VehicleState::AdjustTrun;
+                        }
+                    }
+                }
+            },
+            VehicleState::AdjustTrun => {
+                if let Some(moved) = wheel_event_queue.dequeue() {
+                    moved_count += 1;
+
+                    unsafe {
+                        let running_system = RUNNING_SYSTEM.as_mut().unwrap();
+                        if running_system.on_moved(moved) {
+                            println_display(&mut display, "Turn Adjusted.");
                             running_system.run(vector![0.0_f32, velocity, 0.0_f32]);
                             link_index += 1;
                             vehicle_state = VehicleState::Run;
