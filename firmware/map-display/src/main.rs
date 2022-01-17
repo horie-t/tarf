@@ -127,6 +127,10 @@ fn main() -> ! {
         (vector![1.0_f32, 0.0_f32], vector![1.0_f32, 1.0_f32])
         ];
 
+    clear_display(&mut display);
+
+    println_display(&mut display, "Initialiezed");
+        
     loop {
 
     }
