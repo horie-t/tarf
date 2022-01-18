@@ -87,6 +87,28 @@ fn println_display(display: &mut LCD, text: &str) {
     .draw(display).unwrap();
 }
 
+struct MapView {
+    top_left: Point,
+    size: Size,
+}
+
+impl Drawable for MapView {
+    type Color = Rgb565;
+
+    type Output = ();
+
+    fn draw<D>(&self, target: &mut D) -> Result<Self::Output, D::Error>
+    where
+        D: DrawTarget<Color = Self::Color> {
+
+            Rectangle::new(self.top_left, self.size)
+            .into_styled(PrimitiveStyle::with_stroke(Rgb565::WHITE, 1))
+            .draw(target)?;
+
+            Ok(())
+    }
+}
+
 
 #[entry]
 fn main() -> ! {
@@ -132,6 +154,11 @@ fn main() -> ! {
     println_display(&mut display, "Initialiezed");
         
     loop {
+        let map_view = MapView {
+            top_left: Point::new(80, 50),
+            size: Size::new(160, 160)
+        };
 
+        map_view.draw(&mut display).ok();
     }
 }
