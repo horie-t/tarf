@@ -3,8 +3,11 @@
 
 use bitfield::bitfield;
 use core::fmt::Write;
+use core::iter::FromIterator;
 
 use heapless::String;
+use heapless::Vec;
+use heapless::consts::*;
 
 use panic_halt as _;
 
@@ -87,9 +90,21 @@ fn println_display(display: &mut LCD, text: &str) {
     .draw(display).unwrap();
 }
 
+type Maze = Vec<Vec<MazeCell, U3>, U3>;
+
 struct MapView {
     top_left: Point,
     size: Size,
+}
+
+impl MapView {
+    fn drawMaze<D>(&self, target: &mut D, maze: &Maze) 
+    where
+        D: DrawTarget<Color = Rgb565> {
+            // TODO: 実装する
+
+        
+    }
 }
 
 impl Drawable for MapView {
@@ -139,7 +154,19 @@ fn main() -> ! {
     .ok().unwrap();
     clear_display(&mut display);
 
-    // ルートの初期化(探索してないけどマッピングは終了していることにする)
+    // 迷路の初期化(探索してないけどマッピングは終了していることにする)
+    // 定義は左上を起点にしている
+    let mut maze = Maze::from_iter(
+        //探索・走行時は、迷路は左下を起点(maze[0][0])にして扱いたいので、revする。
+        [
+            Vec::from_iter([CELL_N__W, CELL_N___, CELL_NE__].iter().cloned()),
+            Vec::from_iter([CELL__E_W, CELL_NE_W, CELL__E_W].iter().cloned()),
+            Vec::from_iter([CELL__ESW, CELL___SW, CELL__ES_].iter().cloned()),
+        ]
+        .iter().rev().cloned()
+    );
+
+    // ルートの初期化
     // 左下を原点とする。
     let links = [
         (vector![0.0_f32, 0.0_f32], vector![0.0_f32, 2.0_f32]),
@@ -160,5 +187,6 @@ fn main() -> ! {
         };
 
         map_view.draw(&mut display).ok();
+        map_view.drawMaze(&mut display, &mut maze);
     }
 }
