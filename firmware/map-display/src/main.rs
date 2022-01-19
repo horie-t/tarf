@@ -14,7 +14,7 @@ use panic_halt as _;
 use embedded_graphics::mono_font::{ascii::FONT_10X20, MonoTextStyle};
 use embedded_graphics::pixelcolor::Rgb565;
 use embedded_graphics::prelude::*;
-use embedded_graphics::primitives::{Rectangle, PrimitiveStyle};
+use embedded_graphics::primitives::{Line, Rectangle, PrimitiveStyle};
 use embedded_graphics::text::Text;
 
 use nalgebra as na;
@@ -98,12 +98,21 @@ struct MapView {
 }
 
 impl MapView {
-    fn drawMaze<D>(&self, target: &mut D, maze: &Maze) 
+    fn draw_maze<D>(&self, target: &mut D, maze: &Maze) 
     where
         D: DrawTarget<Color = Rgb565> {
-            // TODO: 実装する
-
-        
+            for (y, row) in maze.iter().rev().enumerate() {
+                for (x, maze_cell) in row.iter().enumerate() {
+                    if maze_cell.east() == WALL {
+                        let x = x as i32;
+                        let y = y as i32;
+                        Line::new(Point::new(self.top_left.x + x as i32 * 10 + 11, self.top_left.y + y * 10),
+                         Point::new(self.top_left.x + x * 10 + 11, self.top_left.y + y * 10 + 11))
+                         .into_styled(PrimitiveStyle::with_stroke(Rgb565::WHITE, 1))
+                         .draw(target).ok();
+                    }
+                }
+            }
     }
 }
 
@@ -187,6 +196,6 @@ fn main() -> ! {
         };
 
         map_view.draw(&mut display).ok();
-        map_view.drawMaze(&mut display, &mut maze);
+        map_view.draw_maze(&mut display, &mut maze);
     }
 }
