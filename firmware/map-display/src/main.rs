@@ -101,13 +101,31 @@ impl MapView {
     fn draw_maze<D>(&self, target: &mut D, maze: &Maze) 
     where
         D: DrawTarget<Color = Rgb565> {
-            for (y, row) in maze.iter().rev().enumerate() {
+            for (y, row) in maze.iter().rev().enumerate() {  // mazeは左下を原点になっているので、画面を描きやすいようにrev()
                 for (x, maze_cell) in row.iter().enumerate() {
+                    let x = x as i32;
+                    let y = y as i32;
+                    if maze_cell.north() == WALL {
+                        Line::new(Point::new(self.top_left.x + x * 10, self.top_left.y + y * 10),
+                         Point::new(self.top_left.x + x * 10 + 10, self.top_left.y + y * 10))
+                         .into_styled(PrimitiveStyle::with_stroke(Rgb565::WHITE, 1))
+                         .draw(target).ok();
+                    }
                     if maze_cell.east() == WALL {
-                        let x = x as i32;
-                        let y = y as i32;
-                        Line::new(Point::new(self.top_left.x + x as i32 * 10 + 11, self.top_left.y + y * 10),
-                         Point::new(self.top_left.x + x * 10 + 11, self.top_left.y + y * 10 + 11))
+                        Line::new(Point::new(self.top_left.x + x * 10 + 10, self.top_left.y + y * 10),
+                         Point::new(self.top_left.x + x * 10 + 10, self.top_left.y + y * 10 + 10))
+                         .into_styled(PrimitiveStyle::with_stroke(Rgb565::WHITE, 1))
+                         .draw(target).ok();
+                    }
+                    if maze_cell.south() == WALL {
+                        Line::new(Point::new(self.top_left.x + x * 10, self.top_left.y + y * 10 + 10),
+                         Point::new(self.top_left.x + x * 10 + 10, self.top_left.y + y * 10 + 10))
+                         .into_styled(PrimitiveStyle::with_stroke(Rgb565::WHITE, 1))
+                         .draw(target).ok();
+                    }
+                    if maze_cell.west() == WALL {
+                        Line::new(Point::new(self.top_left.x + x * 10, self.top_left.y + y * 10),
+                         Point::new(self.top_left.x + x * 10, self.top_left.y + y * 10 + 10))
                          .into_styled(PrimitiveStyle::with_stroke(Rgb565::WHITE, 1))
                          .draw(target).ok();
                     }
