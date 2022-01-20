@@ -98,6 +98,9 @@ struct MapView {
 }
 
 impl MapView {
+    const MAP_CELL_LENGTH_PIXEL: i32 = 10;
+    const MAP_CELL_COUNT_Y: i32 = 16;
+
     fn draw_maze<D>(&self, target: &mut D, maze: &Maze) 
     where
         D: DrawTarget<Color = Rgb565> {
@@ -136,7 +139,15 @@ impl MapView {
     fn draw_route<D>(&self, target: &mut D, route: &[(Vector2<f32>, Vector2<f32>)])
     where
         D: DrawTarget<Color = Rgb565> {
+            let origin = self.top_left + Point::new(Self::MAP_CELL_LENGTH_PIXEL / 2, Self::MAP_CELL_LENGTH_PIXEL / 2);
+            for link in route {
+                let start_node = Point::new(link.0.x as i32, (Self::MAP_CELL_COUNT_Y - 1) - link.0.y as i32) * Self::MAP_CELL_LENGTH_PIXEL;
+                let end_node = Point::new(link.1.x as i32, (Self::MAP_CELL_COUNT_Y - 1) - link.1.y as i32) * Self::MAP_CELL_LENGTH_PIXEL;
 
+                Line::new(start_node + origin, end_node + origin)
+                .into_styled(PrimitiveStyle::with_stroke(Rgb565::GREEN, 1))
+                .draw(target).ok();
+            }
     }
 }
 
