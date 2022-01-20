@@ -2,6 +2,7 @@
 #![no_main]
 
 use bitfield::bitfield;
+use wio::accelerometer::vector;
 use core::fmt::Write;
 use core::iter::FromIterator;
 
@@ -149,6 +150,12 @@ impl MapView {
                 .draw(target).ok();
             }
     }
+
+    fn draw_vehicle<D>(&self, target: &mut D, vehicle_pose: &Vector3<f32>)
+    where
+        D: DrawTarget<Color = Rgb565> {
+
+    }
 }
 
 impl Drawable for MapView {
@@ -236,6 +243,8 @@ fn main() -> ! {
     clear_display(&mut display);
 
     println_display(&mut display, "Initialiezed");
+
+    let mut vehicle_pose = vector![0.0_f32, 0.0_f32, 0.0_f32];
         
     loop {
         let map_view = MapView {
