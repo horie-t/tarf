@@ -18,7 +18,7 @@ use embedded_graphics::primitives::{Line, Rectangle, PrimitiveStyle};
 use embedded_graphics::text::Text;
 
 use nalgebra as na;
-use na::{Vector3, matrix, vector};
+use na::{Vector2, Vector3, matrix, vector};
 
 use wio_terminal as wio;
 use wio::{entry, Display, LCD, Pins};
@@ -132,6 +132,12 @@ impl MapView {
                 }
             }
     }
+
+    fn draw_route<D>(&self, target: &mut D, route: &[(Vector2<f32>, Vector2<f32>)])
+    where
+        D: DrawTarget<Color = Rgb565> {
+
+    }
 }
 
 impl Drawable for MapView {
@@ -208,7 +214,7 @@ fn main() -> ! {
 
     // ルートの初期化
     // 左下を原点とする。
-    let links = [
+    let route = [
         (vector![0.0_f32, 0.0_f32], vector![0.0_f32, 2.0_f32]),
         (vector![0.0_f32, 2.0_f32], vector![2.0_f32, 2.0_f32]),
         (vector![2.0_f32, 2.0_f32], vector![2.0_f32, 0.0_f32]),
@@ -228,5 +234,6 @@ fn main() -> ! {
 
         map_view.draw(&mut display).ok();
         map_view.draw_maze(&mut display, &mut maze);
+        map_view.draw_route(&mut display, &route);
     }
 }
