@@ -2,7 +2,9 @@
 #![no_main]
 
 use bitfield::bitfield;
+use embedded_graphics::primitives::Circle;
 use wio::accelerometer::vector;
+use core::convert::TryInto;
 use core::fmt::Write;
 use core::iter::FromIterator;
 
@@ -154,7 +156,14 @@ impl MapView {
     fn draw_vehicle<D>(&self, target: &mut D, vehicle_pose: &Vector3<f32>)
     where
         D: DrawTarget<Color = Rgb565> {
+            let origin = self.top_left + Point::new(Self::MAP_CELL_LENGTH_PIXEL / 2, Self::MAP_CELL_LENGTH_PIXEL / 2);
 
+            let mut position = vehicle_pose.xy() / 18.0_f32;
+            position.y = ((Self::MAP_CELL_COUNT_Y - 1) * Self::MAP_CELL_LENGTH_PIXEL) as f32 - position.y;
+
+            Circle::with_center(Point::new(origin.x + position.x as i32, origin.y + position.y as i32), 4)
+            .into_styled(PrimitiveStyle::with_fill(Rgb565::RED))
+            .draw(target).ok();
     }
 }
 
@@ -244,7 +253,7 @@ fn main() -> ! {
 
     println_display(&mut display, "Initialiezed");
 
-    let mut vehicle_pose = vector![0.0_f32, 0.0_f32, 0.0_f32];
+    let mut vehicle_pose = vector![180.0_f32, 180.0_f32, 0.0_f32]; // ゴールに到達
         
     loop {
         let map_view = MapView {
@@ -255,5 +264,6 @@ fn main() -> ! {
         map_view.draw(&mut display).ok();
         map_view.draw_maze(&mut display, &mut maze);
         map_view.draw_route(&mut display, &route);
+        map_view.draw_vehicle(&mut display, &vehicle_pose);
     }
 }
