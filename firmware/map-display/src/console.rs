@@ -1,9 +1,11 @@
 use cortex_m::peripheral::NVIC;
 
+use embedded_graphics::mono_font::{ascii::FONT_10X20, MonoTextStyle};
 use embedded_graphics::primitives::Circle;
 use embedded_graphics::pixelcolor::Rgb565;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::{Line, Rectangle, PrimitiveStyle};
+use embedded_graphics::text::Text;
 
 use heapless::consts::*;
 use heapless::spsc::Queue;
@@ -12,6 +14,7 @@ use nalgebra as na;
 use na::{Vector2, Vector3, matrix, vector};
 
 use wio_terminal as wio;
+use wio::LCD;
 use wio::hal::common::eic::pin::{ExtInt10, ExternalInterrupt, Sense};
 use wio::hal::eic::ConfigurableEIC;
 use wio::hal::gpio::v1::{Port, Pc26};
@@ -167,4 +170,35 @@ impl Drawable for MapView {
 
             Ok(())
     }
+}
+
+pub fn clear_display(display: &mut LCD) {
+    // 背景を黒にする
+    let fill = PrimitiveStyle::with_fill(Rgb565::BLACK);
+    display
+        .bounding_box()
+        .into_styled(fill)
+        .draw(display).unwrap();
+
+    // 文字を表示
+    let character_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
+    Text::new(
+        "Hello, Tarf!",
+        Point::new(10, 20),
+        character_style)
+    .draw(display).unwrap();
+}
+
+pub fn println_display(display: &mut LCD, text: &str) {
+    let fill = PrimitiveStyle::with_fill(Rgb565::BLACK);
+    Rectangle::new(Point::new(10, 21), Size::new(320, 21))
+    .into_styled(fill)
+    .draw(display).unwrap();
+
+    let character_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
+    Text::new(
+        text,
+        Point::new(10, 40),
+        character_style)
+    .draw(display).unwrap();
 }

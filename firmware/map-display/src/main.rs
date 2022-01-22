@@ -11,11 +11,7 @@ use heapless::consts::*;
 
 use panic_halt as _;
 
-use embedded_graphics::mono_font::{ascii::FONT_10X20, MonoTextStyle};
-use embedded_graphics::pixelcolor::Rgb565;
 use embedded_graphics::prelude::*;
-use embedded_graphics::primitives::{Line, Rectangle, PrimitiveStyle};
-use embedded_graphics::text::Text;
 
 use nalgebra as na;
 use na::{Vector2, Vector3, matrix, vector};
@@ -28,7 +24,7 @@ use wio::pac::{CorePeripherals, Peripherals};
 use wio::prelude::*;
 
 mod console;
-use console::MapView;
+use console::{MapView, clear_display, println_display};
 
 /*
  * 迷路関連
@@ -61,37 +57,6 @@ const CELL___SW: MazeCell = MazeCell(0b00000101);
 const CELL_N_SW: MazeCell = MazeCell(0b01000101);
 const CELL__ESW: MazeCell = MazeCell(0b00010101);
 const CELL_NESW: MazeCell = MazeCell(0b01010101);
-
-fn clear_display(display: &mut LCD) {
-    // 背景を黒にする
-    let fill = PrimitiveStyle::with_fill(Rgb565::BLACK);
-    display
-        .bounding_box()
-        .into_styled(fill)
-        .draw(display).unwrap();
-
-    // 文字を表示
-    let character_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
-    Text::new(
-        "Hello, Tarf!",
-        Point::new(10, 20),
-        character_style)
-    .draw(display).unwrap();
-}
-
-fn println_display(display: &mut LCD, text: &str) {
-    let fill = PrimitiveStyle::with_fill(Rgb565::BLACK);
-    Rectangle::new(Point::new(10, 21), Size::new(320, 21))
-    .into_styled(fill)
-    .draw(display).unwrap();
-
-    let character_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
-    Text::new(
-        text,
-        Point::new(10, 40),
-        character_style)
-    .draw(display).unwrap();
-}
 
 type Maze = Vec<Vec<MazeCell, U16>, U16>;
 
