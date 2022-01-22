@@ -2,7 +2,7 @@
 
 マイクロ・マウスを制作するプロジェクトです。
 
-https://user-images.githubusercontent.com/10256609/149645178-6519929c-697a-45c2-801c-f016250a9cdd.mp4
+https://user-images.githubusercontent.com/10256609/150635355-fdfd84de-0ae6-4175-8a13-437b662bb9f7.mp4
 
 Tarfは以下の特徴を持ちます。
 
@@ -88,6 +88,7 @@ Firmware
 | 22       | [4マスの迷路](./firmware/quad-cell-maze/)を走行する。                               |
 | 23       | 9マスの[渦巻き状の迷路](./firmware/spiral-maze/)を走行する。                        |
 | 23       | 9マスの[迷路を描画](./firmware/map-display/)してみる。                              |
+| 23       | 9マスの渦巻き状の迷路を[現在地を表示](./firmware/current-pose/)しながら走行する。   |
 
 Body
 
