@@ -2,9 +2,6 @@
 #![no_main]
 
 use bitfield::bitfield;
-use embedded_graphics::primitives::Circle;
-use wio::accelerometer::vector;
-use core::convert::TryInto;
 use core::fmt::Write;
 use core::iter::FromIterator;
 
@@ -29,6 +26,9 @@ use wio::hal::clock::GenericClockController;
 use wio::hal::delay::Delay;
 use wio::pac::{CorePeripherals, Peripherals};
 use wio::prelude::*;
+
+mod console;
+use console::MapView;
 
 /*
  * 迷路関連
@@ -94,96 +94,6 @@ fn println_display(display: &mut LCD, text: &str) {
 }
 
 type Maze = Vec<Vec<MazeCell, U16>, U16>;
-
-struct MapView {
-    top_left: Point,
-    size: Size,
-}
-
-impl MapView {
-    const MAP_CELL_LENGTH_PIXEL: i32 = 10;
-    const MAP_CELL_COUNT_Y: i32 = 16;
-
-    fn draw_maze<D>(&self, target: &mut D, maze: &Maze) 
-    where
-        D: DrawTarget<Color = Rgb565> {
-            for (y, row) in maze.iter().rev().enumerate() {  // mazeは左下を原点になっているので、画面を描きやすいようにrev()
-                for (x, maze_cell) in row.iter().enumerate() {
-                    let x = x as i32;
-                    let y = y as i32;
-                    if maze_cell.north() == WALL {
-                        Line::new(Point::new(self.top_left.x + x * 10, self.top_left.y + y * 10),
-                         Point::new(self.top_left.x + x * 10 + 10, self.top_left.y + y * 10))
-                         .into_styled(PrimitiveStyle::with_stroke(Rgb565::WHITE, 1))
-                         .draw(target).ok();
-                    }
-                    if maze_cell.east() == WALL {
-                        Line::new(Point::new(self.top_left.x + x * 10 + 10, self.top_left.y + y * 10),
-                         Point::new(self.top_left.x + x * 10 + 10, self.top_left.y + y * 10 + 10))
-                         .into_styled(PrimitiveStyle::with_stroke(Rgb565::WHITE, 1))
-                         .draw(target).ok();
-                    }
-                    if maze_cell.south() == WALL {
-                        Line::new(Point::new(self.top_left.x + x * 10, self.top_left.y + y * 10 + 10),
-                         Point::new(self.top_left.x + x * 10 + 10, self.top_left.y + y * 10 + 10))
-                         .into_styled(PrimitiveStyle::with_stroke(Rgb565::WHITE, 1))
-                         .draw(target).ok();
-                    }
-                    if maze_cell.west() == WALL {
-                        Line::new(Point::new(self.top_left.x + x * 10, self.top_left.y + y * 10),
-                         Point::new(self.top_left.x + x * 10, self.top_left.y + y * 10 + 10))
-                         .into_styled(PrimitiveStyle::with_stroke(Rgb565::WHITE, 1))
-                         .draw(target).ok();
-                    }
-                }
-            }
-    }
-
-    fn draw_route<D>(&self, target: &mut D, route: &[(Vector2<f32>, Vector2<f32>)])
-    where
-        D: DrawTarget<Color = Rgb565> {
-            let origin = self.top_left + Point::new(Self::MAP_CELL_LENGTH_PIXEL / 2, Self::MAP_CELL_LENGTH_PIXEL / 2);
-            for link in route {
-                let start_node = Point::new(link.0.x as i32, (Self::MAP_CELL_COUNT_Y - 1) - link.0.y as i32) * Self::MAP_CELL_LENGTH_PIXEL;
-                let end_node = Point::new(link.1.x as i32, (Self::MAP_CELL_COUNT_Y - 1) - link.1.y as i32) * Self::MAP_CELL_LENGTH_PIXEL;
-
-                Line::new(start_node + origin, end_node + origin)
-                .into_styled(PrimitiveStyle::with_stroke(Rgb565::GREEN, 1))
-                .draw(target).ok();
-            }
-    }
-
-    fn draw_vehicle<D>(&self, target: &mut D, vehicle_pose: &Vector3<f32>)
-    where
-        D: DrawTarget<Color = Rgb565> {
-            let origin = self.top_left + Point::new(Self::MAP_CELL_LENGTH_PIXEL / 2, Self::MAP_CELL_LENGTH_PIXEL / 2);
-
-            let mut position = vehicle_pose.xy() / 18.0_f32;
-            position.y = ((Self::MAP_CELL_COUNT_Y - 1) * Self::MAP_CELL_LENGTH_PIXEL) as f32 - position.y;
-
-            Circle::with_center(Point::new(origin.x + position.x as i32, origin.y + position.y as i32), 4)
-            .into_styled(PrimitiveStyle::with_fill(Rgb565::RED))
-            .draw(target).ok();
-    }
-}
-
-impl Drawable for MapView {
-    type Color = Rgb565;
-
-    type Output = ();
-
-    fn draw<D>(&self, target: &mut D) -> Result<Self::Output, D::Error>
-    where
-        D: DrawTarget<Color = Self::Color> {
-
-            Rectangle::new(self.top_left, self.size)
-            .into_styled(PrimitiveStyle::with_stroke(Rgb565::WHITE, 1))
-            .draw(target)?;
-
-            Ok(())
-    }
-}
-
 
 #[entry]
 fn main() -> ! {
