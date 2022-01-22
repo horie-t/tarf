@@ -2,6 +2,8 @@
 
 9つのマス目の渦巻き状の迷路を走行しながら、現在地を表示します。
 
+https://user-images.githubusercontent.com/10256609/150635355-fdfd84de-0ae6-4175-8a13-437b662bb9f7.mp4
+
 ## 使用パーツ
 
 * [Wio Terminal](https://www.switch-science.com/catalog/6360/)
