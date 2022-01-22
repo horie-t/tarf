@@ -87,6 +87,7 @@ Firmware
 | 21       | [スタート位置で向きと位置を調整](./firmware/adjust-position/)してから走行する。     |
 | 22       | [4マスの迷路](./firmware/quad-cell-maze/)を走行する。                               |
 | 23       | 9マスの[渦巻き状の迷路](./firmware/spiral-maze/)を走行する。                        |
+| 23       | 9マスの[迷路を描画](./firmware/map-display/)してみる。                              |
 
 Body
 
