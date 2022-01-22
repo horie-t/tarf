@@ -1,9 +1,20 @@
 use cortex_m::peripheral::NVIC;
 
+use embedded_graphics::mono_font::{ascii::FONT_10X20, MonoTextStyle};
+use embedded_graphics::primitives::Circle;
+use embedded_graphics::pixelcolor::Rgb565;
+use embedded_graphics::prelude::*;
+use embedded_graphics::primitives::{Line, Rectangle, PrimitiveStyle};
+use embedded_graphics::text::Text;
+
 use heapless::consts::*;
 use heapless::spsc::Queue;
 
+use nalgebra as na;
+use na::{Vector2, Vector3, matrix, vector};
+
 use wio_terminal as wio;
+use wio::LCD;
 use wio::hal::common::eic::pin::{ExtInt10, ExternalInterrupt, Sense};
 use wio::hal::eic::ConfigurableEIC;
 use wio::hal::gpio::v1::{Port, Pc26};
@@ -11,6 +22,8 @@ use wio::hal::gpio::v2::{Floating, Input, Interrupt};
 use wio::pac::interrupt;
 use wio::prelude::*;
 
+use super::Maze;
+use super::WALL;
 
 /* 
  * スタート・ボタン系
@@ -67,3 +80,133 @@ macro_rules! button_interrupt {
     };
 }
 
+/* 
+ * 画面系
+ */
+pub struct MapView {
+    pub top_left: Point,
+    pub size: Size,
+}
+
+impl MapView {
+    const MAP_CELL_LENGTH_PIXEL: i32 = 10;
+    const MAP_CELL_COUNT_Y: i32 = 16;
+
+    pub fn draw_maze<D>(&self, target: &mut D, maze: &Maze) 
+    where
+        D: DrawTarget<Color = Rgb565> {
+            for (y, row) in maze.iter().rev().enumerate() {  // mazeは左下を原点になっているので、画面を描きやすいようにrev()
+                for (x, maze_cell) in row.iter().enumerate() {
+                    let x = x as i32;
+                    let y = y as i32;
+                    if maze_cell.north() == WALL {
+                        Line::new(Point::new(self.top_left.x + x * 10, self.top_left.y + y * 10),
+                         Point::new(self.top_left.x + x * 10 + 10, self.top_left.y + y * 10))
+                         .into_styled(PrimitiveStyle::with_stroke(Rgb565::WHITE, 1))
+                         .draw(target).ok();
+                    }
+                    if maze_cell.east() == WALL {
+                        Line::new(Point::new(self.top_left.x + x * 10 + 10, self.top_left.y + y * 10),
+                         Point::new(self.top_left.x + x * 10 + 10, self.top_left.y + y * 10 + 10))
+                         .into_styled(PrimitiveStyle::with_stroke(Rgb565::WHITE, 1))
+                         .draw(target).ok();
+                    }
+                    if maze_cell.south() == WALL {
+                        Line::new(Point::new(self.top_left.x + x * 10, self.top_left.y + y * 10 + 10),
+                         Point::new(self.top_left.x + x * 10 + 10, self.top_left.y + y * 10 + 10))
+                         .into_styled(PrimitiveStyle::with_stroke(Rgb565::WHITE, 1))
+                         .draw(target).ok();
+                    }
+                    if maze_cell.west() == WALL {
+                        Line::new(Point::new(self.top_left.x + x * 10, self.top_left.y + y * 10),
+                         Point::new(self.top_left.x + x * 10, self.top_left.y + y * 10 + 10))
+                         .into_styled(PrimitiveStyle::with_stroke(Rgb565::WHITE, 1))
+                         .draw(target).ok();
+                    }
+                }
+            }
+    }
+
+    pub fn clear_maze<D>(&self, target: &mut D)
+    where
+        D: DrawTarget<Color = Rgb565> {
+            Rectangle::new(self.top_left, self.size)
+            .into_styled(PrimitiveStyle::with_fill(Rgb565::BLACK))
+            .draw(target).ok();
+    }
+
+    pub fn draw_route<D>(&self, target: &mut D, route: &[(Vector2<f32>, Vector2<f32>)])
+    where
+        D: DrawTarget<Color = Rgb565> {
+            let origin = self.top_left + Point::new(Self::MAP_CELL_LENGTH_PIXEL / 2, Self::MAP_CELL_LENGTH_PIXEL / 2);
+            for link in route {
+                let start_node = Point::new(link.0.x as i32, (Self::MAP_CELL_COUNT_Y - 1) - link.0.y as i32) * Self::MAP_CELL_LENGTH_PIXEL;
+                let end_node = Point::new(link.1.x as i32, (Self::MAP_CELL_COUNT_Y - 1) - link.1.y as i32) * Self::MAP_CELL_LENGTH_PIXEL;
+
+                Line::new(start_node + origin, end_node + origin)
+                .into_styled(PrimitiveStyle::with_stroke(Rgb565::GREEN, 1))
+                .draw(target).ok();
+            }
+    }
+
+    pub fn draw_vehicle<D>(&self, target: &mut D, vehicle_pose: &Vector3<f32>)
+    where
+        D: DrawTarget<Color = Rgb565> {
+            let origin = self.top_left + Point::new(Self::MAP_CELL_LENGTH_PIXEL / 2, Self::MAP_CELL_LENGTH_PIXEL / 2);
+
+            let mut position = vehicle_pose.xy() / 18.0_f32;
+            position.y = ((Self::MAP_CELL_COUNT_Y - 1) * Self::MAP_CELL_LENGTH_PIXEL) as f32 - position.y;
+
+            Circle::with_center(Point::new(origin.x + position.x as i32, origin.y + position.y as i32), 4)
+            .into_styled(PrimitiveStyle::with_fill(Rgb565::RED))
+            .draw(target).ok();
+    }
+}
+
+impl Drawable for MapView {
+    type Color = Rgb565;
+
+    type Output = ();
+
+    fn draw<D>(&self, target: &mut D) -> Result<Self::Output, D::Error>
+    where
+        D: DrawTarget<Color = Self::Color> {
+
+            Rectangle::new(self.top_left, self.size)
+            .into_styled(PrimitiveStyle::with_stroke(Rgb565::WHITE, 1))
+            .draw(target)?;
+
+            Ok(())
+    }
+}
+
+pub fn clear_display(display: &mut LCD) {
+    // 背景を黒にする
+    let fill = PrimitiveStyle::with_fill(Rgb565::BLACK);
+    display
+        .bounding_box()
+        .into_styled(fill)
+        .draw(display).unwrap();
+
+    // 文字を表示
+    let character_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
+    Text::new(
+        "Hello, Tarf!",
+        Point::new(10, 20),
+        character_style)
+    .draw(display).unwrap();
+}
+
+pub fn println_display(display: &mut LCD, text: &str) {
+    let fill = PrimitiveStyle::with_fill(Rgb565::BLACK);
+    Rectangle::new(Point::new(10, 21), Size::new(320, 21))
+    .into_styled(fill)
+    .draw(display).unwrap();
+
+    let character_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
+    Text::new(
+        text,
+        Point::new(10, 40),
+        character_style)
+    .draw(display).unwrap();
+}

@@ -201,8 +201,8 @@ impl <S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1: Count16, S2: 
         self.run(v);
     }
 
-    pub fn on_moved(&mut self, moved_event: WheelMovedEvent) -> bool {
-        self.trip_vec += self.wheel_step_to_vec(moved_event);
+    pub fn on_moved(&mut self, moved_event: &WheelMovedEvent) -> bool {
+        self.trip_vec += self.wheel_step_to_vec(&moved_event);
         let distance = (self.target_point.xy() - self.trip_vec.xy()).magnitude();
         let diff_angle = (self.target_point.z - self.trip_vec.z).abs();
         if distance < 2.0_f32 && diff_angle < (PI / 180.0_f32) {
@@ -218,7 +218,7 @@ impl <S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1: Count16, S2: 
         false
     }
 
-    pub fn wheel_step_to_vec(&self, moved_event: WheelMovedEvent) -> Vector3<f32> {
+    pub fn wheel_step_to_vec(&self, moved_event: &WheelMovedEvent) -> Vector3<f32> {
         let mut array = [0.0f32, 0.0f32, 0.0f32];
         array[moved_event.id as usize] = moved_event.distance;
         self.mat_for_odometry * SVector::from(array)

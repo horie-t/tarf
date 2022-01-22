@@ -4,9 +4,11 @@
 use bitfield::bitfield;
 use core::f32::consts::{PI, FRAC_PI_2, FRAC_PI_3, FRAC_PI_4, FRAC_PI_6, FRAC_PI_8};
 use core::fmt::Write;
+use core::iter::FromIterator;
 
 use cortex_m::interrupt::free as disable_interrupts;
 use heapless::String;
+use heapless::Vec;
 use heapless::consts::*;
 use heapless::spsc::Queue;
 use micromath::F32Ext;
@@ -37,7 +39,7 @@ use wio::pac::{CorePeripherals, Peripherals, TC2, TC3, TC4, interrupt};
 use wio::prelude::*;
 
 mod console;
-use console::{Button, ButtonEvent};
+use console::{Button, ButtonEvent, MapView, clear_display, println_display};
 
 mod runningsystem;
 use runningsystem::{RunningSystem, Wheel, WheelMovedEvent, WheelRotateDirection};
@@ -77,37 +79,7 @@ const CELL_N_SW: MazeCell = MazeCell(0b01000101);
 const CELL__ESW: MazeCell = MazeCell(0b00010101);
 const CELL_NESW: MazeCell = MazeCell(0b01010101);
 
-fn clear_display(display: &mut LCD) {
-    // 背景を黒にする
-    let fill = PrimitiveStyle::with_fill(Rgb565::BLACK);
-    display
-        .bounding_box()
-        .into_styled(fill)
-        .draw(display).unwrap();
-
-    // 文字を表示
-    let character_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
-    Text::new(
-        "Hello, Tarf!",
-        Point::new(10, 20),
-        character_style)
-    .draw(display).unwrap();
-}
-
-fn println_display(display: &mut LCD, text: &str) {
-    let fill = PrimitiveStyle::with_fill(Rgb565::BLACK);
-    Rectangle::new(Point::new(10, 21), Size::new(320, 21))
-    .into_styled(fill)
-    .draw(display).unwrap();
-
-    let character_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
-    Text::new(
-        text,
-        Point::new(10, 40),
-        character_style)
-    .draw(display).unwrap();
-}
-
+type Maze = Vec<Vec<MazeCell, U16>, U16>;
 
 static mut WHEEL_MOVED_EVENT_QUEUE: Queue<WheelMovedEvent, U16> = Queue(heapless::i::Queue::new());
 static mut RUNNING_SYSTEM: Option<RunningSystem<PB08, PB09, TC2, PA07, PB04, TC3, PB05, PB06, TC4>> = None;
@@ -252,9 +224,34 @@ fn main() -> ! {
     let mut calibrated_distances = [0_f32; 6];
     let calibration_values = [17.2_f32, 5.9_f32, 4.1_f32, 4.2_f32, 7.13_f32, 22.6_f32];
 
-    // ルートの初期化(探索してないけどマッピングは終了していることにする)
+    // 迷路の初期化(探索してないけどマッピングは終了していることにする)
+    // 定義は左上を起点にしている
+    let mut maze = Maze::from_iter(
+        //探索・走行時は、迷路は左下を起点(maze[0][0])にして扱いたいので、revする。
+        [
+            Vec::from_iter([CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
+            Vec::from_iter([CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
+            Vec::from_iter([CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
+            Vec::from_iter([CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
+            Vec::from_iter([CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
+            Vec::from_iter([CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
+            Vec::from_iter([CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
+            Vec::from_iter([CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
+            Vec::from_iter([CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
+            Vec::from_iter([CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
+            Vec::from_iter([CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
+            Vec::from_iter([CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
+            Vec::from_iter([CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
+            Vec::from_iter([CELL_N__W, CELL_N___, CELL_NE__, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
+            Vec::from_iter([CELL__E_W, CELL_NE_W, CELL__E_W, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
+            Vec::from_iter([CELL__ESW, CELL___SW, CELL__ES_, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
+        ]
+        .iter().rev().cloned()
+    );
+
+    // ルートの初期化
     // 左下を原点とする。
-    let links = [
+    let route = [
         (vector![0.0_f32, 0.0_f32], vector![0.0_f32, 2.0_f32]),
         (vector![0.0_f32, 2.0_f32], vector![2.0_f32, 2.0_f32]),
         (vector![2.0_f32, 2.0_f32], vector![2.0_f32, 0.0_f32]),
@@ -264,13 +261,26 @@ fn main() -> ! {
     // スタート時点のリンクは0番目
     let mut link_index = 0;
 
+    // 地図のViewの初期化
+    let map_view = MapView {
+        top_left: Point::new(80, 50),
+        size: Size::new(161, 161)
+    };
+    map_view.draw_maze(&mut display, &mut maze);
+    map_view.draw_route(&mut display, &route);
+
     // 初期化の後処理
     configurable_eic.finalize();
 
+    let mut vehicle_pose = vector![0.0_f32, 0.0_f32, 0.0_f32];
     let mut vehicle_state = VehicleState::Idle;
     let velocity = 50.0_f32;
 
     let mut moved_count = 0_u64;
+    let mut drawed_moved_count = 0_u64; // FIXME: きれいな実装ではない。
+    map_view.draw_vehicle(&mut display, &vehicle_pose);
+
+    println_display(&mut display, "Initialiezed");
 
     loop {
         // センサ情報を取得
@@ -307,7 +317,8 @@ fn main() -> ! {
 
                     unsafe {
                         let running_system = RUNNING_SYSTEM.as_mut().unwrap();
-                        if running_system.on_moved(moved) {
+                        vehicle_pose += running_system.wheel_step_to_vec(&moved);
+                        if running_system.on_moved(&moved) {
                             let diff_back_front = distances[0] - distances[5];
                             if diff_back_front.abs() < 1.0_f32 {
                                 let len = 111.0_f32 + distances[3] + distances[0];
@@ -330,7 +341,8 @@ fn main() -> ! {
 
                     unsafe {
                         let running_system = RUNNING_SYSTEM.as_mut().unwrap();
-                        if running_system.on_moved(moved) {
+                        vehicle_pose += running_system.wheel_step_to_vec(&moved);
+                        if running_system.on_moved(&moved) {
                             let diff_beside = distances[3] - distances[0];
                 
                             if diff_beside.abs() < 1.5_f32 {
@@ -345,23 +357,24 @@ fn main() -> ! {
                 }
             },
             VehicleState::Run => {
-                if let Some(_moved) = wheel_event_queue.dequeue() {
+                if let Some(moved) = wheel_event_queue.dequeue() {
                     moved_count += 1;
 
                     if distances[1] < 40.0_f32 {
                         // 壁が近づいたら
-                        if link_index == links.len() - 1 {
+                        if link_index == route.len() - 1 {
                             // ゴールに到着
                             unsafe {
                                 let running_system = RUNNING_SYSTEM.as_mut().unwrap();
+                                vehicle_pose += running_system.wheel_step_to_vec(&moved);
                                 running_system.stop();
                             }
                             vehicle_state = VehicleState::Arrive;
                         } else {
                             // 次のリンクを走行開始
-                            let current_link = links[link_index];
+                            let current_link = route[link_index];
                             let current_link_vec = (current_link.1 - current_link.0).normalize();
-                            let next_link = links[link_index + 1];
+                            let next_link = route[link_index + 1];
                             let next_link_vec = (next_link.1 - next_link.0).normalize();
                             let dot = current_link_vec.dotc(&next_link_vec);
                             let det = current_link_vec.perp(&next_link_vec);
@@ -373,6 +386,7 @@ fn main() -> ! {
         
                             unsafe {
                                 let running_system = RUNNING_SYSTEM.as_mut().unwrap();
+                                vehicle_pose += running_system.wheel_step_to_vec(&moved);
                                 running_system.move_to(vector![0.0_f32, 0.0_f32, rad]);
                             }
 
@@ -383,7 +397,13 @@ fn main() -> ! {
                         let rotate_diff = distances[5] - distances[0];
                         unsafe {
                             let running_system = RUNNING_SYSTEM.as_mut().unwrap();
+                            vehicle_pose += running_system.wheel_step_to_vec(&moved);
                             running_system.run(vector![- bias, velocity, - 0.02_f32 * rotate_diff]);
+                        }
+                    } else {
+                        unsafe {
+                            let running_system = RUNNING_SYSTEM.as_mut().unwrap();
+                            vehicle_pose += running_system.wheel_step_to_vec(&moved);
                         }
                     }
                 }
@@ -394,7 +414,8 @@ fn main() -> ! {
 
                     unsafe {
                         let running_system = RUNNING_SYSTEM.as_mut().unwrap();
-                        if running_system.on_moved(moved) {
+                        vehicle_pose += running_system.wheel_step_to_vec(&moved);
+                        if running_system.on_moved(&moved) {
                             println_display(&mut display, "Turned.");
 
                             let diff_back_front = distances[0] - distances[5];
@@ -411,7 +432,7 @@ fn main() -> ! {
 
                     unsafe {
                         let running_system = RUNNING_SYSTEM.as_mut().unwrap();
-                        if running_system.on_moved(moved) {
+                        if running_system.on_moved(&moved) {
                             println_display(&mut display, "Turn Adjusted.");
                             running_system.run(vector![0.0_f32, velocity, 0.0_f32]);
                             link_index += 1;
@@ -428,6 +449,17 @@ fn main() -> ! {
                 link_index = 0;
                 vehicle_state = VehicleState::Idle;
             }
+        }
+
+        // 地図を更新
+        if moved_count % 0x80 == 0 && drawed_moved_count != moved_count {
+            map_view.clear_maze(&mut display);
+            map_view.draw(&mut display).ok();
+            map_view.draw_maze(&mut display, &mut maze);
+            map_view.draw_route(&mut display, &route);
+            map_view.draw_vehicle(&mut display, &vehicle_pose);
+
+            drawed_moved_count = moved_count;
         }
     }
 }
