@@ -24,7 +24,7 @@ use embedded_graphics::primitives::{Rectangle, PrimitiveStyle};
 use embedded_graphics::text::Text;
 
 use nalgebra as na;
-use na::{Vector3, matrix, vector};
+use na::{Vector3, matrix, vector, Matrix3};
 
 use wio_terminal as wio;
 use wio::{entry, Display, LCD, Pins};
@@ -317,7 +317,9 @@ fn main() -> ! {
 
                     unsafe {
                         let running_system = RUNNING_SYSTEM.as_mut().unwrap();
-                        vehicle_pose += running_system.wheel_step_to_vec(&moved);
+                        let vehicle_rotate = Matrix3::new_rotation(vehicle_pose.z);
+                        vehicle_pose += vehicle_rotate * running_system.wheel_step_to_vec(&moved);
+                        
                         if running_system.on_moved(&moved) {
                             let diff_back_front = distances[0] - distances[5];
                             if diff_back_front.abs() < 1.0_f32 {
@@ -341,7 +343,9 @@ fn main() -> ! {
 
                     unsafe {
                         let running_system = RUNNING_SYSTEM.as_mut().unwrap();
-                        vehicle_pose += running_system.wheel_step_to_vec(&moved);
+                        let vehicle_rotate = Matrix3::new_rotation(vehicle_pose.z);
+                        vehicle_pose += vehicle_rotate * running_system.wheel_step_to_vec(&moved);
+
                         if running_system.on_moved(&moved) {
                             let diff_beside = distances[3] - distances[0];
                 
@@ -366,7 +370,8 @@ fn main() -> ! {
                             // ゴールに到着
                             unsafe {
                                 let running_system = RUNNING_SYSTEM.as_mut().unwrap();
-                                vehicle_pose += running_system.wheel_step_to_vec(&moved);
+                                let vehicle_rotate = Matrix3::new_rotation(vehicle_pose.z);
+                                vehicle_pose += vehicle_rotate * running_system.wheel_step_to_vec(&moved);
                                 running_system.stop();
                             }
                             vehicle_state = VehicleState::Arrive;
@@ -386,7 +391,8 @@ fn main() -> ! {
         
                             unsafe {
                                 let running_system = RUNNING_SYSTEM.as_mut().unwrap();
-                                vehicle_pose += running_system.wheel_step_to_vec(&moved);
+                                let vehicle_rotate = Matrix3::new_rotation(vehicle_pose.z);
+                                vehicle_pose += vehicle_rotate * running_system.wheel_step_to_vec(&moved);
                                 running_system.move_to(vector![0.0_f32, 0.0_f32, rad]);
                             }
 
@@ -397,13 +403,15 @@ fn main() -> ! {
                         let rotate_diff = distances[5] - distances[0];
                         unsafe {
                             let running_system = RUNNING_SYSTEM.as_mut().unwrap();
-                            vehicle_pose += running_system.wheel_step_to_vec(&moved);
+                            let vehicle_rotate = Matrix3::new_rotation(vehicle_pose.z);
+                            vehicle_pose += vehicle_rotate * running_system.wheel_step_to_vec(&moved);
                             running_system.run(vector![- bias, velocity, - 0.02_f32 * rotate_diff]);
                         }
                     } else {
                         unsafe {
                             let running_system = RUNNING_SYSTEM.as_mut().unwrap();
-                            vehicle_pose += running_system.wheel_step_to_vec(&moved);
+                            let vehicle_rotate = Matrix3::new_rotation(vehicle_pose.z);
+                            vehicle_pose += vehicle_rotate * running_system.wheel_step_to_vec(&moved);
                         }
                     }
                 }
@@ -414,10 +422,11 @@ fn main() -> ! {
 
                     unsafe {
                         let running_system = RUNNING_SYSTEM.as_mut().unwrap();
-                        vehicle_pose += running_system.wheel_step_to_vec(&moved);
+                        let vehicle_rotate = Matrix3::new_rotation(vehicle_pose.z);
+                        vehicle_pose += vehicle_rotate * running_system.wheel_step_to_vec(&moved);
+
                         if running_system.on_moved(&moved) {
                             println_display(&mut display, "Turned.");
-
                             let diff_back_front = distances[0] - distances[5];
                             let rotate = if diff_back_front > 0.0_f32 { PI / 180.0_f32} else { - PI / 180.0_f32};
                             running_system.move_to(vector![0.0_f32, 0.0_f32, rotate]);
@@ -432,6 +441,8 @@ fn main() -> ! {
 
                     unsafe {
                         let running_system = RUNNING_SYSTEM.as_mut().unwrap();
+                        let vehicle_rotate = Matrix3::new_rotation(vehicle_pose.z);
+                        vehicle_pose += vehicle_rotate * running_system.wheel_step_to_vec(&moved);
                         if running_system.on_moved(&moved) {
                             println_display(&mut display, "Turn Adjusted.");
                             running_system.run(vector![0.0_f32, velocity, 0.0_f32]);
