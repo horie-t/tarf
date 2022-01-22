@@ -163,23 +163,6 @@ impl MapView {
     }
 }
 
-impl Drawable for MapView {
-    type Color = Rgb565;
-
-    type Output = ();
-
-    fn draw<D>(&self, target: &mut D) -> Result<Self::Output, D::Error>
-    where
-        D: DrawTarget<Color = Self::Color> {
-
-            Rectangle::new(self.top_left, self.size)
-            .into_styled(PrimitiveStyle::with_stroke(Rgb565::WHITE, 1))
-            .draw(target)?;
-
-            Ok(())
-    }
-}
-
 pub fn clear_display(display: &mut LCD) {
     // 背景を黒にする
     let fill = PrimitiveStyle::with_fill(Rgb565::BLACK);

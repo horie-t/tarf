@@ -319,7 +319,7 @@ fn main() -> ! {
                         let running_system = RUNNING_SYSTEM.as_mut().unwrap();
                         let vehicle_rotate = Matrix3::new_rotation(vehicle_pose.z);
                         vehicle_pose += vehicle_rotate * running_system.wheel_step_to_vec(&moved);
-                        
+
                         if running_system.on_moved(&moved) {
                             let diff_back_front = distances[0] - distances[5];
                             if diff_back_front.abs() < 1.0_f32 {
@@ -465,7 +465,6 @@ fn main() -> ! {
         // 地図を更新
         if moved_count % 0x80 == 0 && drawed_moved_count != moved_count {
             map_view.clear_maze(&mut display);
-            map_view.draw(&mut display).ok();
             map_view.draw_maze(&mut display, &mut maze);
             map_view.draw_route(&mut display, &route);
             map_view.draw_vehicle(&mut display, &vehicle_pose);
