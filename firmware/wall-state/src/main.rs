@@ -17,17 +17,13 @@ use xca9548a::{SlaveAddr, Xca9548a};
 
 use panic_halt as _;
 
-use embedded_graphics::mono_font::{ascii::FONT_10X20, MonoTextStyle};
-use embedded_graphics::pixelcolor::Rgb565;
 use embedded_graphics::prelude::*;
-use embedded_graphics::primitives::{Rectangle, PrimitiveStyle};
-use embedded_graphics::text::Text;
 
 use nalgebra as na;
 use na::{Vector3, matrix, vector, Matrix3};
 
 use wio_terminal as wio;
-use wio::{entry, Display, LCD, Pins};
+use wio::{entry, Display, Pins};
 use wio::hal::clock::GenericClockController;
 use wio::hal::delay::Delay;
 use wio::hal::common::eic;
