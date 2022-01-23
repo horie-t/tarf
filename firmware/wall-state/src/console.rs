@@ -1,3 +1,4 @@
+use core::fmt::Write;
 use cortex_m::peripheral::NVIC;
 
 use embedded_graphics::mono_font::{ascii::FONT_10X20, MonoTextStyle};
@@ -7,6 +8,7 @@ use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::{Line, Rectangle, PrimitiveStyle};
 use embedded_graphics::text::Text;
 
+use heapless::String;
 use heapless::consts::*;
 use heapless::spsc::Queue;
 
@@ -192,4 +194,23 @@ pub fn println_display(display: &mut LCD, text: &str) {
         Point::new(10, 40),
         character_style)
     .draw(display).unwrap();
+}
+
+pub fn print_current_pose(display: &mut LCD, pose: &Vector2<f32>) {
+    let fill = PrimitiveStyle::with_fill(Rgb565::BLACK);
+    Rectangle::new(Point::new(10, 42), Size::new(140, 21))
+    .into_styled(fill)
+    .draw(display).unwrap();
+
+
+    let mut text: String<U40> = String::new();
+    write!(text, "({:.1}, {:.1})", pose.x, pose.y).unwrap();
+
+    let character_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
+    Text::new(
+        text.as_str(),
+        Point::new(10, 60),
+        character_style)
+    .draw(display).unwrap();
+
 }

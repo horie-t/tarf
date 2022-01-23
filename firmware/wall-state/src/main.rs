@@ -20,7 +20,7 @@ use panic_halt as _;
 use embedded_graphics::prelude::*;
 
 use nalgebra as na;
-use na::{Vector3, matrix, vector, Matrix3};
+use na::{Vector3, matrix, vector, Matrix3, Vector2};
 
 use wio_terminal as wio;
 use wio::{entry, Display, Pins};
@@ -35,7 +35,7 @@ use wio::pac::{CorePeripherals, Peripherals, TC2, TC3, TC4, interrupt};
 use wio::prelude::*;
 
 mod console;
-use console::{Button, ButtonEvent, MapView, clear_display, println_display};
+use console::{Button, ButtonEvent, MapView, clear_display, println_display, print_current_cell};
 
 mod runningsystem;
 use runningsystem::{RunningSystem, Wheel, WheelMovedEvent, WheelRotateDirection};
@@ -75,7 +75,17 @@ const CELL_N_SW: MazeCell = MazeCell(0b01000101);
 const CELL__ESW: MazeCell = MazeCell(0b00010101);
 const CELL_NESW: MazeCell = MazeCell(0b01010101);
 
-type Maze = Vec<Vec<MazeCell, U16>, U16>;
+pub type Maze = Vec<Vec<MazeCell, U16>, U16>;
+
+const MAZE_CELL_SIZE_MM: f32 = 180.0_f32;
+
+pub fn get_maze_cell_in(pose: &Vector3<f32>) -> Vector2<i32> {
+    vector![(pose.x / MAZE_CELL_SIZE_MM) as i32, (pose.y / MAZE_CELL_SIZE_MM) as i32]
+}
+
+pub fn get_fine_maze_cell_in(pose: &Vector3<f32>) -> Vector2<i32> {
+    vector![(pose.x / MAZE_CELL_SIZE_MM / 2.0_f32) as i32, (pose.y / MAZE_CELL_SIZE_MM / 2.0_f32) as i32]
+}
 
 static mut WHEEL_MOVED_EVENT_QUEUE: Queue<WheelMovedEvent, U16> = Queue(heapless::i::Queue::new());
 static mut RUNNING_SYSTEM: Option<RunningSystem<PB08, PB09, TC2, PA07, PB04, TC3, PB05, PB06, TC4>> = None;
@@ -259,7 +269,7 @@ fn main() -> ! {
 
     // 地図のViewの初期化
     let map_view = MapView {
-        top_left: Point::new(80, 50),
+        top_left: Point::new(150, 50),
         size: Size::new(161, 161)
     };
     map_view.draw_maze(&mut display, &mut maze);
@@ -458,12 +468,16 @@ fn main() -> ! {
             }
         }
 
-        // 地図を更新
+        // 画面を更新
         if moved_count % 0x80 == 0 && drawed_moved_count != moved_count {
             map_view.clear_maze(&mut display);
             map_view.draw_maze(&mut display, &mut maze);
             map_view.draw_route(&mut display, &route);
             map_view.draw_vehicle(&mut display, &vehicle_pose);
+
+            // let cell = get_fine_maze_cell_in(&vehicle_pose);
+            // print_current_cell(&mut display, &cell);
+            print_current_cell(&mut display, &vehicle_pose.xy());
 
             drawed_moved_count = moved_count;
         }
