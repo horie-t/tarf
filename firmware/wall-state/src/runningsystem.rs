@@ -209,9 +209,19 @@ impl <S0: PinId, D0: PinId, T0: Count16, S1: PinId, D1: PinId, T1: Count16, S2: 
             // 目的地に到着
             self.stop();
             return true
-        } else if distance < 2.0_f32 && (self.velocity.x != 0.0_f32 || self.velocity.y != 0.0_f32) {
+        } else if (self.velocity.x == 0.0_f32 && self.velocity.y == 0.0_f32) && diff_angle < (PI / 180.0_f32) {
+            // 位置がずれているかもしれないけど角度の調整は終了した
+            self.stop();
+            return true
+        } else if self.velocity.z == 0.0_f32 && distance < 2.0_f32 {
+            // 角度がずれているかもしれないけど位置の調整は終了した
+            self.stop();
+            return true
+        } else if distance < 2.0_f32
+                && (self.velocity.x != 0.0_f32 || self.velocity.y != 0.0_f32) && self.velocity.z != 0.0_f32 {
             self.run(vector![0.0_f32, 0.0_f32, self.velocity.z]);
-        } else if diff_angle < (PI / 180.0_f32) && self.velocity.z != 0.0_f32 {
+        } else if diff_angle < (PI / 180.0_f32)
+                 && (self.velocity.x != 0.0_f32 || self.velocity.y != 0.0_f32) && self.velocity.z != 0.0_f32 {
             self.run(vector![self.velocity.x, self.velocity.y, 0.0_f32]);
         }
 
