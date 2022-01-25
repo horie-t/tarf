@@ -154,12 +154,10 @@ impl MapView {
     pub fn draw_vehicle<D>(&self, target: &mut D, vehicle_pose: &Vector3<f32>)
     where
         D: DrawTarget<Color = Rgb565> {
-            let origin = self.top_left + Point::new(Self::MAP_CELL_LENGTH_PIXEL / 2, Self::MAP_CELL_LENGTH_PIXEL / 2);
-
             let mut position = vehicle_pose.xy() / 18.0_f32;
-            position.y = ((Self::MAP_CELL_COUNT_Y - 1) * Self::MAP_CELL_LENGTH_PIXEL) as f32 - position.y;
+            position.y = (Self::MAP_CELL_COUNT_Y * Self::MAP_CELL_LENGTH_PIXEL) as f32 - position.y;
 
-            Circle::with_center(Point::new(origin.x + position.x as i32, origin.y + position.y as i32), 4)
+            Circle::with_center(Point::new(self.top_left.x + position.x as i32, self.top_left.y + position.y as i32), 4)
             .into_styled(PrimitiveStyle::with_fill(Rgb565::RED))
             .draw(target).ok();
     }

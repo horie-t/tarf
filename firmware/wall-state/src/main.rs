@@ -278,7 +278,7 @@ fn main() -> ! {
     // 初期化の後処理
     configurable_eic.finalize();
 
-    let mut vehicle_pose = vector![0.0_f32, 0.0_f32, 0.0_f32];
+    let mut vehicle_pose = vector![90.0_f32, 90.0_f32, 0.0_f32];
     let mut vehicle_state = VehicleState::Idle;
     let velocity = 50.0_f32;
 
