@@ -35,7 +35,7 @@ use wio::pac::{CorePeripherals, Peripherals, TC2, TC3, TC4, interrupt};
 use wio::prelude::*;
 
 mod console;
-use console::{Button, ButtonEvent, MapView, clear_display, println_display, print_current_pose};
+use console::{Button, ButtonEvent, MapView, clear_display, println_display, print_current_cell};
 
 mod runningsystem;
 use runningsystem::{RunningSystem, Wheel, WheelMovedEvent, WheelRotateDirection};
@@ -477,7 +477,7 @@ fn main() -> ! {
 
             // let cell = get_fine_maze_cell_in(&vehicle_pose);
             // print_current_cell(&mut display, &cell);
-            print_current_pose(&mut display, &vehicle_pose.xy());
+            print_current_cell(&mut display, &vehicle_pose.xy());
 
             drawed_moved_count = moved_count;
         }

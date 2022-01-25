@@ -12,6 +12,7 @@ use heapless::String;
 use heapless::consts::*;
 use heapless::spsc::Queue;
 
+use micromath::F32Ext;
 use nalgebra as na;
 use na::{Vector2, Vector3, matrix, vector};
 
@@ -194,7 +195,9 @@ pub fn println_display(display: &mut LCD, text: &str) {
     .draw(display).unwrap();
 }
 
-pub fn print_current_pose(display: &mut LCD, pose: &Vector2<f32>) {
+pub fn print_current_cell(display: &mut LCD, pose: &Vector2<f32>) {
+    let cell = pose / 180.0_f32;
+
     let fill = PrimitiveStyle::with_fill(Rgb565::BLACK);
     Rectangle::new(Point::new(10, 42), Size::new(140, 21))
     .into_styled(fill)
@@ -202,7 +205,7 @@ pub fn print_current_pose(display: &mut LCD, pose: &Vector2<f32>) {
 
 
     let mut text: String<U40> = String::new();
-    write!(text, "({:.1}, {:.1})", pose.x, pose.y).unwrap();
+    write!(text, "({}, {})", cell.x.trunc() as i32, cell.y.trunc() as i32).unwrap();
 
     let character_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
     Text::new(
@@ -210,5 +213,4 @@ pub fn print_current_pose(display: &mut LCD, pose: &Vector2<f32>) {
         Point::new(10, 60),
         character_style)
     .draw(display).unwrap();
-
 }
