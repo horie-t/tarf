@@ -77,16 +77,6 @@ const CELL_NESW: MazeCell = MazeCell(0b01010101);
 
 pub type Maze = Vec<Vec<MazeCell, U16>, U16>;
 
-const MAZE_CELL_SIZE_MM: f32 = 180.0_f32;
-
-pub fn get_maze_cell_in(pose: &Vector3<f32>) -> Vector2<i32> {
-    vector![(pose.x / MAZE_CELL_SIZE_MM) as i32, (pose.y / MAZE_CELL_SIZE_MM) as i32]
-}
-
-pub fn get_fine_maze_cell_in(pose: &Vector3<f32>) -> Vector2<i32> {
-    vector![(pose.x / MAZE_CELL_SIZE_MM / 2.0_f32) as i32, (pose.y / MAZE_CELL_SIZE_MM / 2.0_f32) as i32]
-}
-
 static mut WHEEL_MOVED_EVENT_QUEUE: Queue<WheelMovedEvent, U16> = Queue(heapless::i::Queue::new());
 static mut RUNNING_SYSTEM: Option<RunningSystem<PB08, PB09, TC2, PA07, PB04, TC3, PB05, PB06, TC4>> = None;
 
