@@ -35,7 +35,7 @@ use wio::pac::{CorePeripherals, Peripherals, TC2, TC3, TC4, interrupt};
 use wio::prelude::*;
 
 mod console;
-use console::{Button, ButtonEvent, MapView, clear_display, println_display, print_current_cell};
+use console::{Button, ButtonEvent, MapView, clear_display, println_display, print_current_cell, print_current_pose};
 
 mod runningsystem;
 use runningsystem::{RunningSystem, Wheel, WheelMovedEvent, WheelRotateDirection};
@@ -443,6 +443,11 @@ fn main() -> ! {
                             println_display(&mut display, "Turn Adjusted.");
                             running_system.run(vector![0.0_f32, velocity, 0.0_f32]);
                             link_index += 1;
+                            let current_link = route[link_index];
+                            let current_link_vec = (current_link.1 - current_link.0).normalize();
+                            vehicle_pose.x = current_link.0.x * 180.0_f32 + 90.0_f32;
+                            vehicle_pose.y = current_link.0.y * 180.0_f32 + 90.0_f32;
+//                            vehicle_pose.z = current_link_vec.y.atan2(current_link_vec.x);
                             vehicle_state = VehicleState::Run;
                         }
                     }
@@ -465,9 +470,8 @@ fn main() -> ! {
             map_view.draw_route(&mut display, &route);
             map_view.draw_vehicle(&mut display, &vehicle_pose);
 
-            // let cell = get_fine_maze_cell_in(&vehicle_pose);
-            // print_current_cell(&mut display, &cell);
-            print_current_cell(&mut display, &vehicle_pose.xy());
+            // print_current_cell(&mut display, &vehicle_pose.xy());
+            print_current_pose(&mut display, &vehicle_pose);
 
             drawed_moved_count = moved_count;
         }

@@ -1,3 +1,4 @@
+use core::f32::consts::PI;
 use core::fmt::Write;
 use cortex_m::peripheral::NVIC;
 
@@ -206,6 +207,24 @@ pub fn print_current_cell(display: &mut LCD, pose: &Vector2<f32>) {
 
     let mut text: String<U40> = String::new();
     write!(text, "({}, {})", cell.x.trunc() as i32, cell.y.trunc() as i32).unwrap();
+
+    let character_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
+    Text::new(
+        text.as_str(),
+        Point::new(10, 60),
+        character_style)
+    .draw(display).unwrap();
+}
+
+pub fn print_current_pose(display: &mut LCD, pose: &Vector3<f32>) {
+    let fill = PrimitiveStyle::with_fill(Rgb565::BLACK);
+    Rectangle::new(Point::new(10, 42), Size::new(140, 21))
+    .into_styled(fill)
+    .draw(display).unwrap();
+
+
+    let mut text: String<U40> = String::new();
+    write!(text, "({}, {}, {})", pose.x.trunc() as i32, pose.y.trunc() as i32, (pose.z / PI * 180.0_f32).trunc() as i32).unwrap();
 
     let character_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
     Text::new(
