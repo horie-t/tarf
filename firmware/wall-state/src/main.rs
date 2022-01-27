@@ -447,7 +447,7 @@ fn main() -> ! {
                             let current_link_vec = (current_link.1 - current_link.0).normalize();
                             vehicle_pose.x = current_link.0.x * 180.0_f32 + 90.0_f32;
                             vehicle_pose.y = current_link.0.y * 180.0_f32 + 90.0_f32;
-//                            vehicle_pose.z = current_link_vec.y.atan2(current_link_vec.x);
+                            vehicle_pose.z = current_link_vec.y.atan2(current_link_vec.x) - FRAC_PI_2;
                             vehicle_state = VehicleState::Run;
                         }
                     }
