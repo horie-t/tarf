@@ -470,8 +470,8 @@ fn main() -> ! {
             map_view.draw_route(&mut display, &route);
             map_view.draw_vehicle(&mut display, &vehicle_pose);
 
-            // print_current_cell(&mut display, &vehicle_pose.xy());
-            print_current_pose(&mut display, &vehicle_pose);
+            print_current_cell(&mut display, &vehicle_pose.xy());
+            // print_current_pose(&mut display, &vehicle_pose);
 
             drawed_moved_count = moved_count;
         }
