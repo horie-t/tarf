@@ -47,6 +47,7 @@ use sensor::{SensorEvent, SensorI2C, TofSensors};
  * 迷路関連
  */
 bitfield! {
+    /// 迷路の壁
     #[derive(Clone, Copy)]
     pub struct MazeCell(u8);
     pub north, set_north: 7, 6;
@@ -54,6 +55,17 @@ bitfield! {
     pub south, set_south: 3, 2;
     pub west, set_west: 1, 0;
 }
+
+bitfield! {
+    /// 自車周辺壁
+    #[derive(Clone, Copy)]
+    pub struct SurroundWall(u8);
+    pub northeast, set_northeast: 7, 6;
+    pub southeast, set_southeast: 5, 4;
+    pub southwest, set_southwest: 3, 2;
+    pub northwest, set_northwest: 1, 0;
+}
+
 const NO_WALL: u8 = 0;
 const WALL: u8 = 1;
 const UNKNOWN_WALL: u8 = 3;
