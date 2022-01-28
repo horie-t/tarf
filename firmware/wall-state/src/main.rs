@@ -84,7 +84,8 @@ pub fn get_maze_cell_in(pose: &Vector3<f32>) -> Vector2<i32> {
 }
 
 pub fn get_fine_maze_cell_in(pose: &Vector3<f32>) -> Vector2<i32> {
-    vector![(pose.x / MAZE_CELL_SIZE_MM / 2.0_f32) as i32, (pose.y / MAZE_CELL_SIZE_MM / 2.0_f32) as i32]
+    vector![((pose.x - MAZE_CELL_SIZE_MM / 4.0_f32) / (MAZE_CELL_SIZE_MM / 2.0_f32)) as i32,
+        ((pose.y - MAZE_CELL_SIZE_MM / 4.0_f32) / (MAZE_CELL_SIZE_MM / 2.0_f32)) as i32]
 }
 
 static mut WHEEL_MOVED_EVENT_QUEUE: Queue<WheelMovedEvent, U16> = Queue(heapless::i::Queue::new());
@@ -482,6 +483,10 @@ fn main() -> ! {
 
             print_current_cell(&mut display, &vehicle_pose.xy());
             // print_current_pose(&mut display, &vehicle_pose);
+            let vehicle_fine_cell = get_fine_maze_cell_in(&vehicle_pose);
+            let mut text: String<U40> = String::new();
+            write!(text, "({}, {})", vehicle_fine_cell.x, vehicle_fine_cell.y).unwrap();
+            println_display(&mut display, text.as_str());
 
             drawed_moved_count = moved_count;
         }
