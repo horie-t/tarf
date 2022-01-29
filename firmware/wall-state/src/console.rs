@@ -26,8 +26,7 @@ use wio::hal::gpio::v2::{Floating, Input, Interrupt};
 use wio::pac::interrupt;
 use wio::prelude::*;
 
-use super::Maze;
-use super::WALL;
+use super::{Maze, SideWall, WALL};
 
 /* 
  * スタート・ボタン系
@@ -162,6 +161,45 @@ impl MapView {
             Circle::with_center(Point::new(self.top_left.x + position.x as i32, self.top_left.y + position.y as i32), 4)
             .into_styled(PrimitiveStyle::with_fill(Rgb565::RED))
             .draw(target).ok();
+    }
+}
+
+pub struct SideWallView {
+    pub top_left: Point,
+    pub size: Size,
+}
+
+impl SideWallView {
+    const MAP_CELL_LENGTH_PIXEL: i32 = 10;
+    
+    pub fn draw_wall<D>(&self, target: &mut D, wall: &SideWall) 
+    where
+        D: DrawTarget<Color = Rgb565> {
+
+            if wall.front_left() == WALL {
+                Line::new(Point::new(self.top_left.x, self.top_left.y),
+                Point::new(self.top_left.x, self.top_left.y + Self::MAP_CELL_LENGTH_PIXEL / 2))
+                .into_styled(PrimitiveStyle::with_stroke(Rgb565::WHITE, 1))
+                .draw(target).ok();
+            }
+            if wall.front_right() == WALL {
+                Line::new(Point::new(self.top_left.x + Self::MAP_CELL_LENGTH_PIXEL, self.top_left.y),
+                Point::new(self.top_left.x + Self::MAP_CELL_LENGTH_PIXEL, self.top_left.y + Self::MAP_CELL_LENGTH_PIXEL / 2))
+                .into_styled(PrimitiveStyle::with_stroke(Rgb565::WHITE, 1))
+                .draw(target).ok();
+            }
+            if wall.back_left() == WALL {
+                Line::new(Point::new(self.top_left.x, self.top_left.y + Self::MAP_CELL_LENGTH_PIXEL / 2),
+                Point::new(self.top_left.x, self.top_left.y + Self::MAP_CELL_LENGTH_PIXEL))
+                .into_styled(PrimitiveStyle::with_stroke(Rgb565::WHITE, 1))
+                .draw(target).ok();
+            }
+            if wall.back_right() == WALL {
+                Line::new(Point::new(self.top_left.x + Self::MAP_CELL_LENGTH_PIXEL, self.top_left.y + Self::MAP_CELL_LENGTH_PIXEL / 2),
+                Point::new(self.top_left.x + Self::MAP_CELL_LENGTH_PIXEL, self.top_left.y + Self::MAP_CELL_LENGTH_PIXEL))
+                .into_styled(PrimitiveStyle::with_stroke(Rgb565::WHITE, 1))
+                .draw(target).ok();
+            }
     }
 }
 
