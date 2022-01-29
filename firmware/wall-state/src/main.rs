@@ -100,6 +100,11 @@ pub fn get_fine_maze_cell_in(pose: &Vector3<f32>) -> Vector2<i32> {
         ((pose.y - MAZE_CELL_SIZE_MM / 4.0_f32) / (MAZE_CELL_SIZE_MM / 2.0_f32)) as i32]
 }
 
+pub fn calc_surround_wall(pose: &Vector3<f32>) -> SurroundWall {
+
+    SurroundWall(0_u8)
+}
+
 static mut WHEEL_MOVED_EVENT_QUEUE: Queue<WheelMovedEvent, U16> = Queue(heapless::i::Queue::new());
 static mut RUNNING_SYSTEM: Option<RunningSystem<PB08, PB09, TC2, PA07, PB04, TC3, PB05, PB06, TC4>> = None;
 
