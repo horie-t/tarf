@@ -57,13 +57,13 @@ bitfield! {
 }
 
 bitfield! {
-    /// 自車周辺壁
+    /// 側面の壁
     #[derive(Clone, Copy)]
-    pub struct SurroundWall(u8);
-    pub northeast, set_northeast: 7, 6;
-    pub southeast, set_southeast: 5, 4;
-    pub southwest, set_southwest: 3, 2;
-    pub northwest, set_northwest: 1, 0;
+    pub struct SideWall(u8);
+    pub front_right, set_front_right: 7, 6;
+    pub back_right, set_back_right: 5, 4;
+    pub front_left, set_front_left: 3, 2;
+    pub back_left, set_back_left: 1, 0;
 }
 
 const NO_WALL: u8 = 0;
@@ -100,9 +100,54 @@ pub fn get_fine_maze_cell_in(pose: &Vector3<f32>) -> Vector2<i32> {
         ((pose.y - MAZE_CELL_SIZE_MM / 4.0_f32) / (MAZE_CELL_SIZE_MM / 2.0_f32)) as i32]
 }
 
-pub fn calc_surround_wall(pose: &Vector3<f32>) -> SurroundWall {
+pub fn calc_side_wall(maze: &Maze, pose: &Vector3<f32>) -> SideWall {
+    let cell = get_fine_maze_cell_in(pose);
 
-    SurroundWall(0_u8)
+    if cell.x & 1 == 0 && cell.y & 1 == 0 {
+        let maze_cell = maze[(cell.y / 2) as usize][(cell.x / 2) as usize];
+        let direction = pose.z;
+
+        if FRAC_PI_4 < direction && direction <= FRAC_PI_4 * 3.0_f32 {
+            // 北向き
+            let mut side_wall = SideWall(0_u8);
+            side_wall.set_front_right(maze_cell.east());
+            side_wall.set_back_right(maze_cell.east());
+            side_wall.set_front_left(maze_cell.west());
+            side_wall.set_back_left(maze_cell.west());
+
+            side_wall
+
+        } else if -FRAC_PI_4 * 3.0_f32 < direction && direction <= -FRAC_PI_4 {
+            // 南向き
+            let mut side_wall = SideWall(0_u8);
+            side_wall.set_front_right(maze_cell.west());
+            side_wall.set_back_right(maze_cell.west());
+            side_wall.set_front_left(maze_cell.east());
+            side_wall.set_back_left(maze_cell.east());
+
+            side_wall
+        } else if -FRAC_PI_4 < direction && direction <= FRAC_PI_4 {
+            // 東向き
+            let mut side_wall = SideWall(0_u8);
+            side_wall.set_front_right(maze_cell.north());
+            side_wall.set_back_right(maze_cell.north());
+            side_wall.set_front_right(maze_cell.south());
+            side_wall.set_back_right(maze_cell.south());
+
+            side_wall
+        } else {
+            // 西向き
+            let mut side_wall = SideWall(0_u8);
+            side_wall.set_front_right(maze_cell.south());
+            side_wall.set_back_right(maze_cell.south());
+            side_wall.set_front_right(maze_cell.north());
+            side_wall.set_back_right(maze_cell.north());
+
+            side_wall
+        }
+    } else {
+        SideWall(0xff_u8)
+    }
 }
 
 static mut WHEEL_MOVED_EVENT_QUEUE: Queue<WheelMovedEvent, U16> = Queue(heapless::i::Queue::new());
