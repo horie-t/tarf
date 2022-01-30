@@ -105,7 +105,7 @@ pub fn calc_side_wall(maze: &Maze, pose: &Vector3<f32>) -> SideWall {
 
     if cell.x & 1 == 0 && cell.y & 1 == 0 {
         let maze_cell = maze[(cell.y / 2) as usize][(cell.x / 2) as usize];
-        let direction = pose.z;
+        let direction = pose.z + FRAC_PI_2;
 
         if FRAC_PI_4 < direction && direction <= FRAC_PI_4 * 3.0_f32 {
             // 北向き
@@ -114,16 +114,6 @@ pub fn calc_side_wall(maze: &Maze, pose: &Vector3<f32>) -> SideWall {
             side_wall.set_back_right(maze_cell.east());
             side_wall.set_front_left(maze_cell.west());
             side_wall.set_back_left(maze_cell.west());
-
-            side_wall
-
-        } else if -FRAC_PI_4 * 3.0_f32 < direction && direction <= -FRAC_PI_4 {
-            // 南向き
-            let mut side_wall = SideWall(0_u8);
-            side_wall.set_front_right(maze_cell.west());
-            side_wall.set_back_right(maze_cell.west());
-            side_wall.set_front_left(maze_cell.east());
-            side_wall.set_back_left(maze_cell.east());
 
             side_wall
         } else if -FRAC_PI_4 < direction && direction <= FRAC_PI_4 {
@@ -135,13 +125,22 @@ pub fn calc_side_wall(maze: &Maze, pose: &Vector3<f32>) -> SideWall {
             side_wall.set_back_right(maze_cell.south());
 
             side_wall
-        } else {
+        } else if FRAC_PI_4 * 3.0_f32 < direction && direction <= FRAC_PI_4 * 5.0_f32 {
             // 西向き
             let mut side_wall = SideWall(0_u8);
             side_wall.set_front_right(maze_cell.south());
             side_wall.set_back_right(maze_cell.south());
             side_wall.set_front_right(maze_cell.north());
             side_wall.set_back_right(maze_cell.north());
+
+            side_wall
+        } else {
+            // 南向き
+            let mut side_wall = SideWall(0_u8);
+            side_wall.set_front_right(maze_cell.west());
+            side_wall.set_back_right(maze_cell.west());
+            side_wall.set_front_left(maze_cell.east());
+            side_wall.set_back_left(maze_cell.east());
 
             side_wall
         }
@@ -340,7 +339,7 @@ fn main() -> ! {
 
     let side_wall_view = SideWallView {
         top_left: Point::new(20, 80),
-        size: Size::new(SideWallView::MAP_CELL_LENGTH_PIXEL as u32, SideWallView::MAP_CELL_LENGTH_PIXEL as u32)
+        size: Size::new(11, 11)
     };
 
     // 初期化の後処理
