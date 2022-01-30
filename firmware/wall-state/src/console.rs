@@ -259,7 +259,7 @@ pub fn print_current_cell(display: &mut LCD, pose: &Vector2<f32>) {
 
 pub fn print_current_pose(display: &mut LCD, pose: &Vector3<f32>) {
     let fill = PrimitiveStyle::with_fill(Rgb565::BLACK);
-    Rectangle::new(Point::new(10, 42), Size::new(140, 21))
+    Rectangle::new(Point::new(10, 42), Size::new(200, 21))
     .into_styled(fill)
     .draw(display).unwrap();
 
