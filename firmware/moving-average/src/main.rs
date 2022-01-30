@@ -527,7 +527,7 @@ fn main() -> ! {
 
                             vehicle_state = VehicleState::Turn;
                         }
-                    } else if moved_count % (3 * 64) == 0 {
+                    } else if moved_count % 32 == 0 {
                         let bias = (calibrated_distances[0] + calibrated_distances[5] - 100.0_f32) / 2.0_f32;
                         let rotate_diff = calibrated_distances[5] - calibrated_distances[0];
                         unsafe {
