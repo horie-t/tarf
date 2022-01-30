@@ -170,11 +170,14 @@ pub struct SideWallView {
 }
 
 impl SideWallView {
-    const MAP_CELL_LENGTH_PIXEL: i32 = 10;
+    pub const MAP_CELL_LENGTH_PIXEL: i32 = 10;
     
     pub fn draw_wall<D>(&self, target: &mut D, wall: &SideWall) 
     where
         D: DrawTarget<Color = Rgb565> {
+            Rectangle::new(self.top_left, self.size)
+            .into_styled(PrimitiveStyle::with_fill(Rgb565::BLACK))
+            .draw(target).ok();
 
             if wall.front_left() == WALL {
                 Line::new(Point::new(self.top_left.x, self.top_left.y),

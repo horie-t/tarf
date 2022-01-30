@@ -35,7 +35,7 @@ use wio::pac::{CorePeripherals, Peripherals, TC2, TC3, TC4, interrupt};
 use wio::prelude::*;
 
 mod console;
-use console::{Button, ButtonEvent, MapView, clear_display, println_display, print_current_cell, print_current_pose};
+use console::{Button, ButtonEvent, MapView, clear_display, println_display, print_current_cell, print_current_pose, SideWallView};
 
 mod runningsystem;
 use runningsystem::{RunningSystem, Wheel, WheelMovedEvent, WheelRotateDirection};
@@ -338,6 +338,11 @@ fn main() -> ! {
     map_view.draw_maze(&mut display, &mut maze);
     map_view.draw_route(&mut display, &route);
 
+    let side_wall_view = SideWallView {
+        top_left: Point::new(20, 80),
+        size: Size::new(SideWallView::MAP_CELL_LENGTH_PIXEL as u32, SideWallView::MAP_CELL_LENGTH_PIXEL as u32)
+    };
+
     // 初期化の後処理
     configurable_eic.finalize();
 
@@ -549,6 +554,8 @@ fn main() -> ! {
             let mut text: String<U40> = String::new();
             write!(text, "({}, {})", vehicle_fine_cell.x, vehicle_fine_cell.y).unwrap();
             println_display(&mut display, text.as_str());
+
+            side_wall_view.draw_wall(&mut display, &calc_side_wall(&maze, &vehicle_pose));
 
             drawed_moved_count = moved_count;
         }
