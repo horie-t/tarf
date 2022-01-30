@@ -232,7 +232,7 @@ pub fn println_display(display: &mut LCD, text: &str) {
     let character_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
     Text::new(
         text,
-        Point::new(10, 40),
+        Point::new(10, 37),
         character_style)
     .draw(display).unwrap();
 }

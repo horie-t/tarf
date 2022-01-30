@@ -604,10 +604,12 @@ fn main() -> ! {
             map_view.draw_vehicle(&mut display, &vehicle_pose);
 
             // print_current_cell(&mut display, &vehicle_pose.xy());
-            print_current_pose(&mut display, &vehicle_pose);
-            let vehicle_fine_cell = get_fine_maze_cell_in(&vehicle_pose);
+            //print_current_pose(&mut display, &vehicle_pose);
+            //let vehicle_fine_cell = get_fine_maze_cell_in(&vehicle_pose);
             let mut text: String<U40> = String::new();
-            write!(text, "({}, {})", vehicle_fine_cell.x, vehicle_fine_cell.y).unwrap();
+            //write!(text, "({}, {})", vehicle_fine_cell.x, vehicle_fine_cell.y).unwrap();
+            write!(text, "{:.1}, {:.1}, {:.1}, {:.1}", 
+                calibrated_distances[0], calibrated_distances[2], calibrated_distances[3], calibrated_distances[5]).unwrap();
             println_display(&mut display, text.as_str());
 
             side_wall_view.draw_wall(&mut display, &calc_side_wall(&maze, &vehicle_pose));
