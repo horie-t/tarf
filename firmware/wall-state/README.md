@@ -1,6 +1,6 @@
-# 周囲の壁表示
+# 側面の壁表示
 
-走行している迷路の付近のマスの壁の状態を表示します。
+走行している位置付近の側面の壁の有無を表示します。
 
 ## 使用パーツ
 
@@ -11,3 +11,4 @@
 * [ToF レーザーモジュール(VL53L0X)](https://www.amazon.co.jp/gp/product/B08NDN4L9H/)
 * [Grove 8チャンネルI2Cマルチプレクサ/I2Cハブ(TCA9548A)](https://eleshop.jp/shop/g/gK2C313/)
 * [LiPoバッテリー](https://amzn.to/3DF7PCH)
+* [クラシックサイズマイクロマウス迷路用 壁 (プラスチック)](https://www.rt-shop.jp/index.php?main_page=product_info&products_id=3745)

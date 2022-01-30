@@ -89,6 +89,7 @@ Firmware
 | 23       | 9マスの[渦巻き状の迷路](./firmware/spiral-maze/)を走行する。                        |
 | 23       | 9マスの[迷路を描画](./firmware/map-display/)してみる。                              |
 | 23       | 9マスの渦巻き状の迷路を[現在地を表示](./firmware/current-pose/)しながら走行する。   |
+| 24       | 9マスの渦巻き状の迷路を[側面の壁を表示](./firmware/wall-state/)しながら走行する。   |
 
 Body
 

@@ -102,10 +102,11 @@ pub fn get_fine_maze_cell_in(pose: &Vector3<f32>) -> Vector2<i32> {
 
 pub fn calc_side_wall(maze: &Maze, pose: &Vector3<f32>) -> SideWall {
     let cell = get_fine_maze_cell_in(pose);
+    let direction = pose.z + FRAC_PI_2;
 
     if cell.x & 1 == 0 && cell.y & 1 == 0 {
+        // マス目の中央付近にいる場合
         let maze_cell = maze[(cell.y / 2) as usize][(cell.x / 2) as usize];
-        let direction = pose.z + FRAC_PI_2;
 
         if FRAC_PI_4 < direction && direction <= FRAC_PI_4 * 3.0_f32 {
             // 北向き
@@ -145,7 +146,62 @@ pub fn calc_side_wall(maze: &Maze, pose: &Vector3<f32>) -> SideWall {
             side_wall
         }
     } else {
-        SideWall(0xff_u8)
+        // マス目の境目近辺
+        if cell.y & 1 != 0 {
+            // 南北方向の境目
+            if FRAC_PI_4 < direction && direction <= FRAC_PI_4 * 3.0_f32 {
+                // 北向き
+                let front_maze_cell = maze[(cell.y / 2 + 1) as usize][(cell.x / 2) as usize];
+                let back_maze_cell = maze[(cell.y / 2) as usize][(cell.x / 2) as usize];
+
+                let mut side_wall = SideWall(0_u8);
+                side_wall.set_front_right(front_maze_cell.east());
+                side_wall.set_back_right(back_maze_cell.east());
+                side_wall.set_front_left(front_maze_cell.west());
+                side_wall.set_back_left(back_maze_cell.west());
+    
+                side_wall
+            } else {
+                // 南向き
+                let front_maze_cell = maze[(cell.y / 2) as usize][(cell.x / 2) as usize];
+                let back_maze_cell = maze[(cell.y / 2 + 1) as usize][(cell.x / 2) as usize];
+
+                let mut side_wall = SideWall(0_u8);
+                side_wall.set_front_right(front_maze_cell.west());
+                side_wall.set_back_right(back_maze_cell.west());
+                side_wall.set_front_left(front_maze_cell.east());
+                side_wall.set_back_left(back_maze_cell.east());
+    
+                side_wall
+            }
+        } else {
+            // 東西方向の境目
+            if -FRAC_PI_4 < direction && direction <= FRAC_PI_4 {
+                // 東向き
+                let front_maze_cell = maze[(cell.y / 2) as usize][(cell.x / 2 + 1) as usize];
+                let back_maze_cell = maze[(cell.y / 2) as usize][(cell.x / 2) as usize];
+
+                let mut side_wall = SideWall(0_u8);
+                side_wall.set_front_left(front_maze_cell.north());
+                side_wall.set_back_left(back_maze_cell.north());
+                side_wall.set_front_right(front_maze_cell.south());
+                side_wall.set_back_right(back_maze_cell.south());
+    
+                side_wall
+            } else {
+                // 西向き
+                let front_maze_cell = maze[(cell.y / 2) as usize][(cell.x / 2) as usize];
+                let back_maze_cell = maze[(cell.y / 2) as usize][(cell.x / 2 + 1) as usize];
+
+                let mut side_wall = SideWall(0_u8);
+                side_wall.set_front_left(front_maze_cell.south());
+                side_wall.set_back_left(back_maze_cell.south());
+                side_wall.set_front_right(front_maze_cell.north());
+                side_wall.set_back_right(back_maze_cell.north());
+    
+                side_wall
+            }
+        }
     }
 }
 
@@ -310,7 +366,7 @@ fn main() -> ! {
             Vec::from_iter([CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
             Vec::from_iter([CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
             Vec::from_iter([CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
-            Vec::from_iter([CELL_N__W, CELL_N___, CELL_NE__, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
+            Vec::from_iter([CELL_N__W, CELL_N_S_, CELL_NE__, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
             Vec::from_iter([CELL__E_W, CELL_NE_W, CELL__E_W, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
             Vec::from_iter([CELL__ESW, CELL___SW, CELL__ES_, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
         ]
