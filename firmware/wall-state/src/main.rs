@@ -119,8 +119,8 @@ pub fn calc_side_wall(maze: &Maze, pose: &Vector3<f32>) -> SideWall {
         } else if -FRAC_PI_4 < direction && direction <= FRAC_PI_4 {
             // 東向き
             let mut side_wall = SideWall(0_u8);
-            side_wall.set_front_right(maze_cell.north());
-            side_wall.set_back_right(maze_cell.north());
+            side_wall.set_front_left(maze_cell.north());
+            side_wall.set_back_left(maze_cell.north());
             side_wall.set_front_right(maze_cell.south());
             side_wall.set_back_right(maze_cell.south());
 
@@ -128,8 +128,8 @@ pub fn calc_side_wall(maze: &Maze, pose: &Vector3<f32>) -> SideWall {
         } else if FRAC_PI_4 * 3.0_f32 < direction && direction <= FRAC_PI_4 * 5.0_f32 {
             // 西向き
             let mut side_wall = SideWall(0_u8);
-            side_wall.set_front_right(maze_cell.south());
-            side_wall.set_back_right(maze_cell.south());
+            side_wall.set_front_left(maze_cell.south());
+            side_wall.set_back_left(maze_cell.south());
             side_wall.set_front_right(maze_cell.north());
             side_wall.set_back_right(maze_cell.north());
 
@@ -547,8 +547,8 @@ fn main() -> ! {
             map_view.draw_route(&mut display, &route);
             map_view.draw_vehicle(&mut display, &vehicle_pose);
 
-            print_current_cell(&mut display, &vehicle_pose.xy());
-            // print_current_pose(&mut display, &vehicle_pose);
+            // print_current_cell(&mut display, &vehicle_pose.xy());
+            print_current_pose(&mut display, &vehicle_pose);
             let vehicle_fine_cell = get_fine_maze_cell_in(&vehicle_pose);
             let mut text: String<U40> = String::new();
             write!(text, "({}, {})", vehicle_fine_cell.x, vehicle_fine_cell.y).unwrap();
