@@ -424,7 +424,7 @@ fn main() -> ! {
         match vehicle_state {
             VehicleState::Idle => {
                 if let Some(event) = start_event_queue.dequeue() {
-                    let diff_back_front = distances[0] - distances[5];
+                    let diff_back_front = calibrated_distances[0] - calibrated_distances[5];
                     let rotate = if diff_back_front > 0.0_f32 { 2.0_f32 * PI / 180.0_f32} else { - 2.0_f32 * PI / 180.0_f32};
 
                     let mut text: String<U40> = String::new();
@@ -450,10 +450,10 @@ fn main() -> ! {
                         vehicle_pose += vehicle_rotate * running_system.wheel_step_to_vec(&moved);
 
                         if running_system.on_moved(&moved) {
-                            let diff_back_front = distances[0] - distances[5];
+                            let diff_back_front = calibrated_distances[0] - calibrated_distances[5];
                             if diff_back_front.abs() < 1.0_f32 {
-                                let len = 111.0_f32 + distances[3] + distances[0];
-                                let diff_beside = distances[3] - distances[0];
+                                let len = 111.0_f32 + calibrated_distances[3] + calibrated_distances[0];
+                                let diff_beside = calibrated_distances[3] - calibrated_distances[0];
             
                                 let move_len = (diff_beside * 168.0_f32 / len) / 2.0_f32;
                                 running_system.move_to(vector![move_len, 0.0_f32, 0.0_f32]);
@@ -476,7 +476,7 @@ fn main() -> ! {
                         vehicle_pose += vehicle_rotate * running_system.wheel_step_to_vec(&moved);
 
                         if running_system.on_moved(&moved) {
-                            let diff_beside = distances[3] - distances[0];
+                            let diff_beside = calibrated_distances[3] - calibrated_distances[0];
                 
                             if diff_beside.abs() < 1.5_f32 {
                                 running_system.run(vector![0.0_f32, velocity, 0.0_f32]);
@@ -493,7 +493,7 @@ fn main() -> ! {
                 if let Some(moved) = wheel_event_queue.dequeue() {
                     moved_count += 1;
 
-                    if distances[1] < 40.0_f32 {
+                    if calibrated_distances[1] < 40.0_f32 {
                         // 壁が近づいたら
                         if link_index == route.len() - 1 {
                             // ゴールに到着
@@ -528,8 +528,8 @@ fn main() -> ! {
                             vehicle_state = VehicleState::Turn;
                         }
                     } else if moved_count % (3 * 64) == 0 {
-                        let bias = (distances[0] + distances[5] - 120.0_f32) / 2.0_f32;
-                        let rotate_diff = distances[5] - distances[0];
+                        let bias = (calibrated_distances[0] + calibrated_distances[5] - 100.0_f32) / 2.0_f32;
+                        let rotate_diff = calibrated_distances[5] - calibrated_distances[0];
                         unsafe {
                             let running_system = RUNNING_SYSTEM.as_mut().unwrap();
                             let vehicle_rotate = Matrix3::new_rotation(vehicle_pose.z);
@@ -556,7 +556,7 @@ fn main() -> ! {
 
                         if running_system.on_moved(&moved) {
                             println_display(&mut display, "Turned.");
-                            let diff_back_front = distances[0] - distances[5];
+                            let diff_back_front = calibrated_distances[0] - calibrated_distances[5];
                             let rotate = if diff_back_front > 0.0_f32 { PI / 180.0_f32} else { - PI / 180.0_f32};
                             running_system.move_to(vector![0.0_f32, 0.0_f32, rotate]);
                             vehicle_state = VehicleState::AdjustTrun;
