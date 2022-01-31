@@ -41,7 +41,7 @@ mod runningsystem;
 use runningsystem::{RunningSystem, Wheel, WheelMovedEvent, WheelRotateDirection};
 
 mod sensor;
-use sensor::{SensorEvent, SensorI2C, TofSensors};
+use sensor::{SensorEvent, SensorI2C, TofSensors, SensorMeasuredValue};
 
 /*
  * 迷路関連
@@ -344,9 +344,17 @@ fn main() -> ! {
     tof_interrupt!(TOF_SENSORS, sensor4_gpio1, sensor4_i2c, 4u16, EIC_EXTINT_12);
     tof_interrupt!(TOF_SENSORS, sensor5_gpio1, sensor5_i2c, 5u16, EIC_EXTINT_13);
     let mut consumer = unsafe { EVENT_QUEUE.split().1 };
-    let mut distances = [0_f32; 6];
-    let mut calibrated_distances = [0_f32; 6];
-    let calibration_values = [17.2_f32, 5.9_f32, 4.1_f32, 4.2_f32, 7.13_f32, 22.6_f32];
+    let mut distances = [
+        SensorMeasuredValue::new(0, -17.2_f32),
+        SensorMeasuredValue::new(1, -5.9_f32),
+        SensorMeasuredValue::new(2, -4.1_f32),
+        SensorMeasuredValue::new(3, -4.2_f32),
+        SensorMeasuredValue::new(4, -7.13_f32),
+        SensorMeasuredValue::new(5, -22.6_f32),
+    ];
+    // let mut distances = [0_f32; 6];
+    // let mut calibrated_distances = [0_f32; 6];
+    // let calibration_values = [17.2_f32, 5.9_f32, 4.1_f32, 4.2_f32, 7.13_f32, 22.6_f32];
 
     // 迷路の初期化(探索してないけどマッピングは終了していることにする)
     // 定義は左上を起点にしている
@@ -415,16 +423,14 @@ fn main() -> ! {
         // センサ情報を取得
         if let Some(interrupt_event) = consumer.dequeue() {
             let id = interrupt_event.id as usize;
-            let calibrated_distance = interrupt_event.distance as f32 - calibration_values[id];
-            distances[id] = 0.5_f32 * interrupt_event.distance as f32 + 0.5_f32 * distances[id];
-            calibrated_distances[id] = 0.5_f32 * calibrated_distance + 0.5_f32 * calibrated_distances[id];
+            distances[id].append_value(interrupt_event.distance as f32);
         }
 
         // 走行制御
         match vehicle_state {
             VehicleState::Idle => {
                 if let Some(event) = start_event_queue.dequeue() {
-                    let diff_back_front = calibrated_distances[0] - calibrated_distances[5];
+                    let diff_back_front = distances[0].get_value() - distances[5].get_value();
                     let rotate = if diff_back_front > 0.0_f32 { 2.0_f32 * PI / 180.0_f32} else { - 2.0_f32 * PI / 180.0_f32};
 
                     let mut text: String<U40> = String::new();
@@ -450,10 +456,10 @@ fn main() -> ! {
                         vehicle_pose += vehicle_rotate * running_system.wheel_step_to_vec(&moved);
 
                         if running_system.on_moved(&moved) {
-                            let diff_back_front = calibrated_distances[0] - calibrated_distances[5];
+                            let diff_back_front = distances[0].get_value() - distances[5].get_value();
                             if diff_back_front.abs() < 1.0_f32 {
-                                let len = 111.0_f32 + calibrated_distances[3] + calibrated_distances[0];
-                                let diff_beside = calibrated_distances[3] - calibrated_distances[0];
+                                let len = 111.0_f32 + distances[3].get_value() + distances[0].get_value();
+                                let diff_beside = distances[3].get_value() - distances[0].get_value();
             
                                 let move_len = (diff_beside * 168.0_f32 / len) / 2.0_f32;
                                 running_system.move_to(vector![move_len, 0.0_f32, 0.0_f32]);
@@ -476,7 +482,7 @@ fn main() -> ! {
                         vehicle_pose += vehicle_rotate * running_system.wheel_step_to_vec(&moved);
 
                         if running_system.on_moved(&moved) {
-                            let diff_beside = calibrated_distances[3] - calibrated_distances[0];
+                            let diff_beside = distances[3].get_value() - distances[0].get_value();
                 
                             if diff_beside.abs() < 1.5_f32 {
                                 running_system.run(vector![0.0_f32, velocity, 0.0_f32]);
@@ -493,7 +499,7 @@ fn main() -> ! {
                 if let Some(moved) = wheel_event_queue.dequeue() {
                     moved_count += 1;
 
-                    if calibrated_distances[1] < 40.0_f32 {
+                    if distances[1].get_value() < 40.0_f32 {
                         // 壁が近づいたら
                         if link_index == route.len() - 1 {
                             // ゴールに到着
@@ -528,8 +534,8 @@ fn main() -> ! {
                             vehicle_state = VehicleState::Turn;
                         }
                     } else if moved_count % 32 == 0 {
-                        let bias = (calibrated_distances[0] + calibrated_distances[5] - 100.0_f32) / 2.0_f32;
-                        let rotate_diff = calibrated_distances[5] - calibrated_distances[0];
+                        let bias = (distances[0].get_value() + distances[5].get_value() - 100.0_f32) / 2.0_f32;
+                        let rotate_diff = distances[5].get_value() - distances[0].get_value();
                         unsafe {
                             let running_system = RUNNING_SYSTEM.as_mut().unwrap();
                             let vehicle_rotate = Matrix3::new_rotation(vehicle_pose.z);
@@ -556,7 +562,7 @@ fn main() -> ! {
 
                         if running_system.on_moved(&moved) {
                             println_display(&mut display, "Turned.");
-                            let diff_back_front = calibrated_distances[0] - calibrated_distances[5];
+                            let diff_back_front = distances[0].get_value() - distances[5].get_value();
                             let rotate = if diff_back_front > 0.0_f32 { PI / 180.0_f32} else { - PI / 180.0_f32};
                             running_system.move_to(vector![0.0_f32, 0.0_f32, rotate]);
                             vehicle_state = VehicleState::AdjustTrun;
@@ -609,7 +615,7 @@ fn main() -> ! {
             let mut text: String<U40> = String::new();
             //write!(text, "({}, {})", vehicle_fine_cell.x, vehicle_fine_cell.y).unwrap();
             write!(text, "{:.1}, {:.1}, {:.1}, {:.1}", 
-                calibrated_distances[0], calibrated_distances[2], calibrated_distances[3], calibrated_distances[5]).unwrap();
+                distances[0].get_value(), distances[2].get_value(), distances[3].get_value(), distances[5].get_value()).unwrap();
             println_display(&mut display, text.as_str());
 
             side_wall_view.draw_wall(&mut display, &calc_side_wall(&maze, &vehicle_pose));
