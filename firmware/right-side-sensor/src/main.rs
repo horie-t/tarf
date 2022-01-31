@@ -374,8 +374,8 @@ fn main() -> ! {
             Vec::from_iter([CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
             Vec::from_iter([CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
             Vec::from_iter([CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
-            Vec::from_iter([CELL_N__W, CELL_N_S_, CELL_NE__, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
-            Vec::from_iter([CELL__E_W, CELL_NE_W, CELL__E_W, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
+            Vec::from_iter([CELL_N__W, CELL_NE__, CELL_NE_W, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
+            Vec::from_iter([CELL__E_W, CELL__E_W, CELL__E_W, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
             Vec::from_iter([CELL__ESW, CELL___SW, CELL__ES_, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____, CELL_____].iter().cloned()),
         ]
         .iter().rev().cloned()
@@ -385,10 +385,10 @@ fn main() -> ! {
     // 左下を原点とする。
     let route = [
         (vector![0.0_f32, 0.0_f32], vector![0.0_f32, 2.0_f32]),
-        (vector![0.0_f32, 2.0_f32], vector![2.0_f32, 2.0_f32]),
-        (vector![2.0_f32, 2.0_f32], vector![2.0_f32, 0.0_f32]),
-        (vector![2.0_f32, 0.0_f32], vector![1.0_f32, 0.0_f32]),
-        (vector![1.0_f32, 0.0_f32], vector![1.0_f32, 1.0_f32])
+        (vector![0.0_f32, 2.0_f32], vector![1.0_f32, 2.0_f32]),
+        (vector![1.0_f32, 2.0_f32], vector![1.0_f32, 0.0_f32]),
+        (vector![1.0_f32, 0.0_f32], vector![2.0_f32, 0.0_f32]),
+        (vector![2.0_f32, 0.0_f32], vector![2.0_f32, 2.0_f32])
         ];
     // スタート時点のリンクは0番目
     let mut link_index = 0;
