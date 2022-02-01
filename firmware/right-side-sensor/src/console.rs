@@ -26,7 +26,7 @@ use wio::hal::gpio::v2::{Floating, Input, Interrupt};
 use wio::pac::interrupt;
 use wio::prelude::*;
 
-use super::{Maze, SideWall, WALL};
+use super::maze::{Maze, SideWall, WALL};
 
 /* 
  * スタート・ボタン系
