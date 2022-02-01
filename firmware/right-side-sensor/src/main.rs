@@ -45,7 +45,7 @@ use sensor::{SensorEvent, SensorI2C, TofSensors, SensorMeasuredValue};
 mod maze;
 use maze::{Maze, calc_side_wall};
 use maze::{CELL_____, CELL_N___, CELL__E__, CELL_NE__, CELL___S_, CELL_N_S_, CELL__ES_, CELL_NES_, CELL____W, CELL_N__W, CELL__E_W, CELL_NE_W, CELL___SW, CELL_N_SW, CELL__ESW, CELL_NESW, };
-
+use maze::{NO_WALL, WALL, UNKNOWN_WALL};
 
 static mut WHEEL_MOVED_EVENT_QUEUE: Queue<WheelMovedEvent, U16> = Queue(heapless::i::Queue::new());
 static mut RUNNING_SYSTEM: Option<RunningSystem<PB08, PB09, TC2, PA07, PB04, TC3, PB05, PB06, TC4>> = None;
@@ -376,8 +376,18 @@ fn main() -> ! {
                             vehicle_state = VehicleState::Turn;
                         }
                     } else if moved_count % 32 == 0 {
-                        let bias = (distances[0].get_value() + distances[5].get_value() - 100.0_f32) / 2.0_f32;
-                        let rotate_diff = distances[5].get_value() - distances[0].get_value();
+                        let side_wall = calc_side_wall(&maze, &vehicle_pose);
+
+                        let bias: f32;
+                        let rotate_diff: f32;
+                        if side_wall.front_right() == WALL && side_wall.back_right() == WALL {
+                            bias = - (distances[2].get_value() + distances[3].get_value() - 100.0_f32) / 2.0_f32;
+                            rotate_diff = - (distances[3].get_value() - distances[2].get_value());
+                        } else {
+                            bias = (distances[0].get_value() + distances[5].get_value() - 100.0_f32) / 2.0_f32;
+                            rotate_diff = distances[5].get_value() - distances[0].get_value();
+                        }
+
                         unsafe {
                             let running_system = RUNNING_SYSTEM.as_mut().unwrap();
                             let vehicle_rotate = Matrix3::new_rotation(vehicle_pose.z);
