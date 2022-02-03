@@ -376,11 +376,17 @@ fn main() -> ! {
                             vehicle_state = VehicleState::Turn;
                         }
                     } else if moved_count % 32 == 0 {
+                        // 両側の壁の有無に合わせて位置を調整する。
                         let side_wall = calc_side_wall(&maze, &vehicle_pose);
 
                         let bias: f32;
                         let rotate_diff: f32;
-                        if side_wall.front_right() == WALL && side_wall.back_right() == WALL {
+                        if side_wall.front_right() == WALL && side_wall.back_right() == WALL 
+                                && side_wall.front_left() == WALL && side_wall.back_left() == WALL {
+                            // TODO 正式実装
+                            bias = 0.0_f32;
+                            rotate_diff = 0.0_f32;
+                        } else if side_wall.front_right() == WALL && side_wall.back_right() == WALL {
                             bias = - (distances[2].get_value() + distances[3].get_value() - 100.0_f32) / 2.0_f32;
                             rotate_diff = - (distances[3].get_value() - distances[2].get_value());
                         } else {
