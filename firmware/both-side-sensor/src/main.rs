@@ -394,7 +394,8 @@ fn main() -> ! {
                                 bias = - (right_side_distance_sum - 100.0_f32) / 2.0_f32;
                                 rotate_diff = - (distances[3].get_value() - distances[2].get_value());
                             } else {
-                                // TODO 実装
+                                bias = ((distances[0].get_value() + distances[5].get_value()) - (distances[2].get_value() + distances[3].get_value())) / 4.0_f32;
+                                rotate_diff = (distances[5].get_value() - distances[0].get_value() - (distances[3].get_value() - distances[2].get_value())) / 2.0_f32;
                             };
                         } else if side_wall.front_right() == WALL && side_wall.back_right() == WALL {
                             // 右側に壁が存在
