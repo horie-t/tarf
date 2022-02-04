@@ -383,19 +383,31 @@ fn main() -> ! {
                         let rotate_diff: f32;
                         if side_wall.front_right() == WALL && side_wall.back_right() == WALL 
                                 && side_wall.front_left() == WALL && side_wall.back_left() == WALL {
-                            if distances[0].get_value() + distances[5].get_value() > distances[2].get_value() + distances[3].get_value() {
-                                bias = (distances[0].get_value() + distances[5].get_value() - 100.0_f32) / 2.0_f32;
+                            // 両側に壁が存在
+                            let left_side_distance_sum = distances[0].get_value() + distances[5].get_value();
+                            let right_side_distance_sum = distances[2].get_value() + distances[3].get_value();
+
+                            if left_side_distance_sum - right_side_distance_sum > 5.0_f32 {
+                                bias = (left_side_distance_sum - 100.0_f32) / 2.0_f32;
                                 rotate_diff = distances[5].get_value() - distances[0].get_value();
-                            } else {
-                                bias = - (distances[2].get_value() + distances[3].get_value() - 100.0_f32) / 2.0_f32;
+                            } else if left_side_distance_sum - right_side_distance_sum < -5.0_f32 {
+                                bias = - (right_side_distance_sum - 100.0_f32) / 2.0_f32;
                                 rotate_diff = - (distances[3].get_value() - distances[2].get_value());
+                            } else {
+                                // TODO 実装
                             };
                         } else if side_wall.front_right() == WALL && side_wall.back_right() == WALL {
+                            // 右側に壁が存在
                             bias = - (distances[2].get_value() + distances[3].get_value() - 100.0_f32) / 2.0_f32;
                             rotate_diff = - (distances[3].get_value() - distances[2].get_value());
-                        } else {
+                        } else if side_wall.front_left() == WALL && side_wall.back_left() == WALL {
+                            // 左側に壁が存在
                             bias = (distances[0].get_value() + distances[5].get_value() - 100.0_f32) / 2.0_f32;
                             rotate_diff = distances[5].get_value() - distances[0].get_value();
+                        } else {
+                            // 両側に壁がない時は位置調整をしない
+                            bias = 0.0_f32;
+                            rotate_diff = 0.0_f32
                         }
 
                         unsafe {
