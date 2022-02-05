@@ -2,6 +2,8 @@
 
 両側のセンサの値を使って走行する。できるだけ直進性を上げるのが目標。
 
+![迷路](./images/PXL_20220202_112643532.jpg)
+
 ## 使用パーツ
 
 * [Wio Terminal](https://www.switch-science.com/catalog/6360/)
