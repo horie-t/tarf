@@ -194,9 +194,6 @@ fn main() -> ! {
         SensorMeasuredValue::new(4, -7.13_f32, 18.8_f32),
         SensorMeasuredValue::new(5, -22.6_f32, 27.6_f32),
     ];
-    // let mut distances = [0_f32; 6];
-    // let mut calibrated_distances = [0_f32; 6];
-    // let calibration_values = [17.2_f32, 5.9_f32, 4.1_f32, 4.2_f32, 7.13_f32, 22.6_f32];
 
     // 迷路の初期化(探索してないけどマッピングは終了していることにする)
     // 定義は左上を起点にしている
