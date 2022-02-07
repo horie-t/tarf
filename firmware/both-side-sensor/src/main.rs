@@ -187,12 +187,12 @@ fn main() -> ! {
     tof_interrupt!(TOF_SENSORS, sensor5_gpio1, sensor5_i2c, 5u16, EIC_EXTINT_13);
     let mut consumer = unsafe { EVENT_QUEUE.split().1 };
     let mut distances = [
-        SensorMeasuredValue::new(0, -17.2_f32),
-        SensorMeasuredValue::new(1, -5.9_f32),
-        SensorMeasuredValue::new(2, -4.1_f32),
-        SensorMeasuredValue::new(3, -4.2_f32),
-        SensorMeasuredValue::new(4, -7.13_f32),
-        SensorMeasuredValue::new(5, -22.6_f32),
+        SensorMeasuredValue::new(0, -17.2_f32, -25.5_f32),
+        SensorMeasuredValue::new(1, -5.9_f32, -21.2_f32),
+        SensorMeasuredValue::new(2, -4.1_f32, 16.5_f32),
+        SensorMeasuredValue::new(3, -4.2_f32, 15.3_f32),
+        SensorMeasuredValue::new(4, -7.13_f32, 18.8_f32),
+        SensorMeasuredValue::new(5, -22.6_f32, 27.6_f32),
     ];
     // let mut distances = [0_f32; 6];
     // let mut calibrated_distances = [0_f32; 6];

@@ -159,28 +159,34 @@ pub struct SensorMeasuredValue {
     value: f32,
     values: [f32; 3],
     index: usize,
-    calibration_value: f32
+    calibration_value: f32,
+    calibration_inclined_value: f32
 }
 
 impl SensorMeasuredValue {
-    pub fn new(id: u32, calibration_value: f32) -> SensorMeasuredValue {
+    pub fn new(id: u32, calibration_value: f32, calibration_inclined_value: f32) -> SensorMeasuredValue {
         SensorMeasuredValue {
             id,
             value: 0.0_f32,
             values: [0.0_f32; 3],
             index: 0,
-            calibration_value
+            calibration_value,
+            calibration_inclined_value,
         }
     }
 
     pub fn append_value(&mut self, value: f32) {
-        self.values[self.index] = value + self.calibration_value;
+        self.values[self.index] = value;
         self.index += 1;
         self.index %= self.values.len();
         self.value = self.values.iter().sum::<f32>() / (self.values.len() as f32);
     }
 
     pub fn get_value(&self) -> f32 {
-        self.value
+        self.value + self.calibration_value
+    }
+
+    pub fn get_value_inclined(&self) -> f32 {
+        self.value + self.calibration_inclined_value
     }
 }
