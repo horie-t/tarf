@@ -409,6 +409,24 @@ fn main() -> ! {
                             rotate_diff = 0.0_f32
                         }
 
+                        // 現在地の補正
+                        let current_link = route[link_index];
+                        let current_link_vec = (current_link.1 - current_link.0).normalize();
+                        let direction = current_link_vec.y.atan2(current_link_vec.x);
+                        if (direction - FRAC_PI_2).abs() < 0.1_f32 {
+                            // 北向き
+                            vehicle_pose.x = current_link.1.x + bias;
+                        } else if (direction + FRAC_PI_2).abs() < 0.1_f32 {
+                            // 南向き
+                            vehicle_pose.x = current_link.1.x - bias;
+                        } else if direction.abs() < 0.1_f32 {
+                            // 東向き
+                            vehicle_pose.y = current_link.1.y + bias;
+                        } else {
+                            // 西向き
+                            vehicle_pose.y = current_link.1.y - bias;
+                        }
+
                         unsafe {
                             let running_system = RUNNING_SYSTEM.as_mut().unwrap();
                             let vehicle_rotate = Matrix3::new_rotation(vehicle_pose.z);
