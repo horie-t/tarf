@@ -376,32 +376,33 @@ fn main() -> ! {
                         // 両側の壁の有無に合わせて位置を調整する。
                         let side_wall = calc_side_wall(&maze, &vehicle_pose);
 
+                        // 調整値の計算
                         let bias: f32;
                         let rotate_diff: f32;
                         if side_wall.front_right() == WALL && side_wall.back_right() == WALL 
                                 && side_wall.front_left() == WALL && side_wall.back_left() == WALL {
                             // 両側に壁が存在
-                            let left_side_distance_sum = distances[0].get_value() + distances[5].get_value();
-                            let right_side_distance_sum = distances[2].get_value() + distances[3].get_value();
+                            let left_side_distance_sum = distances[0].get_value_inclined() + distances[5].get_value_inclined();
+                            let right_side_distance_sum = distances[2].get_value_inclined() + distances[3].get_value_inclined();
 
                             if left_side_distance_sum - right_side_distance_sum > 5.0_f32 {
-                                bias = (left_side_distance_sum - 100.0_f32) / 2.0_f32;
-                                rotate_diff = distances[5].get_value() - distances[0].get_value();
+                                bias = (left_side_distance_sum - 84.0_f32) / 2.0_f32;
+                                rotate_diff = distances[5].get_value_inclined() - distances[0].get_value_inclined();
                             } else if left_side_distance_sum - right_side_distance_sum < -5.0_f32 {
-                                bias = - (right_side_distance_sum - 100.0_f32) / 2.0_f32;
-                                rotate_diff = - (distances[3].get_value() - distances[2].get_value());
+                                bias = - (right_side_distance_sum - 84.0_f32) / 2.0_f32;
+                                rotate_diff = - (distances[3].get_value_inclined() - distances[2].get_value_inclined());
                             } else {
-                                bias = ((distances[0].get_value() + distances[5].get_value()) - (distances[2].get_value() + distances[3].get_value())) / 4.0_f32;
-                                rotate_diff = (distances[5].get_value() - distances[0].get_value() - (distances[3].get_value() - distances[2].get_value())) / 2.0_f32;
+                                bias = ((distances[0].get_value_inclined() + distances[5].get_value_inclined()) - (distances[2].get_value_inclined() + distances[3].get_value_inclined())) / 4.0_f32;
+                                rotate_diff = (distances[5].get_value_inclined() - distances[0].get_value_inclined() - (distances[3].get_value_inclined() - distances[2].get_value_inclined())) / 2.0_f32;
                             };
                         } else if side_wall.front_right() == WALL && side_wall.back_right() == WALL {
                             // 右側に壁が存在
-                            bias = - (distances[2].get_value() + distances[3].get_value() - 100.0_f32) / 2.0_f32;
-                            rotate_diff = - (distances[3].get_value() - distances[2].get_value());
+                            bias = - (distances[2].get_value_inclined() + distances[3].get_value_inclined() - 84.0_f32) / 2.0_f32;
+                            rotate_diff = - (distances[3].get_value_inclined() - distances[2].get_value_inclined());
                         } else if side_wall.front_left() == WALL && side_wall.back_left() == WALL {
                             // 左側に壁が存在
-                            bias = (distances[0].get_value() + distances[5].get_value() - 100.0_f32) / 2.0_f32;
-                            rotate_diff = distances[5].get_value() - distances[0].get_value();
+                            bias = (distances[0].get_value_inclined() + distances[5].get_value_inclined() - 84.0_f32) / 2.0_f32;
+                            rotate_diff = distances[5].get_value_inclined() - distances[0].get_value_inclined();
                         } else {
                             // 両側に壁がない時は位置調整をしない
                             bias = 0.0_f32;
