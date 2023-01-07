@@ -46,7 +46,7 @@ fn main() -> ! {
         &mut pins.port
     );
 
-    delay.delay_ms(2000u32);
+    delay.delay_ms(1000u32);
 
     let i2c: I2CMaster3<
         Sercom3Pad0<Pa17<PfD>>,
@@ -60,15 +60,10 @@ fn main() -> ! {
         pins.i2c1_scl.into_pad(&mut pins.port)
     );
 
-    delay.delay_ms(2000u32);
+    delay.delay_ms(1000u32);
     writeln!(&mut serial, "Hello, {}!\r", "tarf").unwrap();
 
     let mut imu = bno055::Bno055::new(i2c).with_alternative_address();
-    let result = imu.init(&mut delay);
-    if result.is_err() {
-        writeln!(&mut serial, "error.\r").unwrap();
-        result.unwrap();
-    }
     imu.init(&mut delay).unwrap();
     writeln!(&mut serial, "BNO055 intialized.\r").unwrap();
 
