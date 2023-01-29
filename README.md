@@ -90,7 +90,9 @@ Firmware
 | 23       | 9マスの[迷路を描画](./firmware/map-display/)してみる。                              |
 | 23       | 9マスの渦巻き状の迷路を[現在地を表示](./firmware/current-pose/)しながら走行する。   |
 | 24       | 9マスの渦巻き状の迷路を[側面の壁を表示](./firmware/wall-state/)しながら走行する。   |
-| 25       | [BNO055 9軸センサ](./firmware/9axis-sensor/)を接続する。
+| 25       | [BNO055 9軸センサ](./firmware/9axis-sensor/)を接続する。                            |
+| ***      | 以降筐体変更・ライブラリバージョン 2023年最新化                                     |
+| 26       | [内蔵LEDでLチカ(2023年版)](./firmware/l-chika-2)をしてみる。                        |
 
 Body
 
@@ -103,6 +105,9 @@ Body
 | 5        | [オムニホイールのハブを作成](./cad/wheel_hub)                                       |
 | 6        | [TOF距離センサを搭載](./cad/core1_motor_sensor_4)                                   |
 | 7        | [Wio Terminalとバッテリーの収納部にI2Cハブを搭載](./cad/core2_3)                    |
+| ***      | 以降大幅な設計変更                                                                  |
+| 8        | [TOF距離センサの位置を変更](./cad/core1_motor_sensor_5/)                            |
+| 9        | [Wio Terminalとバッテリーの格納部の下部の長さ調整](./cad/core2_5/)                  |
 
 
 curcuit
