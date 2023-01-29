@@ -1,0 +1,12 @@
+[package]
+authors = ["HORIE Tetsuya <horie-t@users.noreply.github.com>"]
+name = "lcd-display"
+edition = "2021"
+version = "0.2.0"
+
+[dependencies]
+embedded-graphics = "0.7.1"
+embedded-hal = "0.2.7"
+heapless = "0.5.6"
+panic-halt = "0.2"
+wio_terminal = "0.6.1"
