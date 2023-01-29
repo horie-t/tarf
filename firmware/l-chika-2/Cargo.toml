@@ -1,0 +1,10 @@
+[package]
+authors = ["HORIE Tetsuya <horie-t@users.noreply.github.com>"]
+name = "l-chika"
+edition = "2021"
+version = "0.1.0"
+
+[dependencies]
+panic-halt = "0.2"
+wio_terminal = "0.6.1"
+embedded-hal = "0.2.7"
