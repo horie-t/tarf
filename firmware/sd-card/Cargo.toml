@@ -1,0 +1,68 @@
+[package]
+authors = ["HORIE Tetsuya <horie-t@users.noreply.github.com>"]
+name = "l-chika"
+edition = "2018"
+version = "0.1.0"
+
+[dependencies]
+panic-halt = "0.2"
+wio_terminal = "0.4.0"
+embedded-hal = "0.2.4"
+
+
+[dependencies.bbqueue]
+version = "^0.4.11"
+optional = true
+
+[dependencies.bitfield]
+version = "0.13"
+
+[dependencies.cortex-m]
+version = "0.6"
+
+[dependencies.cortex-m-rt]
+version = "0.6"
+optional = true
+
+[dependencies.display-interface-spi]
+version = "0.4"
+
+[dependencies.embedded-sdmmc]
+version = "0.3.0"
+
+[dependencies.generic-array]
+version = "0.14"
+optional = true
+
+[dependencies.heapless]
+version = "0.5"
+
+[dependencies.ili9341]
+version = "0.5.0"
+
+[dependencies.lis3dh]
+version = "0.3.0"
+
+[dependencies.nb]
+version = "0.1"
+optional = true
+
+[dependencies.nom]
+version = "^6.0"
+optional = true
+default-features = false
+
+[dependencies.seeed-erpc]
+version = "0.1.1"
+optional = true
+
+[dependencies.usb-device]
+version = "0.2"
+optional = true
+
+[dependencies.usbd-serial]
+version = "0.1"
+optional = true
+[dependencies.embedded-graphics]
+version = "0.7.1"
+
