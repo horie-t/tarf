@@ -91,9 +91,6 @@ Firmware
 | 23       | 9マスの渦巻き状の迷路を[現在地を表示](./firmware/current-pose/)しながら走行する。   |
 | 24       | 9マスの渦巻き状の迷路を[側面の壁を表示](./firmware/wall-state/)しながら走行する。   |
 | 25       | [BNO055 9軸センサ](./firmware/9axis-sensor/)を接続する。                            |
-| ***      | 以降筐体変更・ライブラリバージョン 2023年最新化                                     |
-| 26       | [内蔵LEDでLチカ(2023年版)](./firmware/l-chika-2)をしてみる。                        |
-| 27       | [LCDに文字(2023年版)](./firmware/lcd-display-2/)を表示する。                        |
 
 Body
 
