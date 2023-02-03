@@ -91,6 +91,7 @@ Firmware
 | 23       | 9マスの渦巻き状の迷路を[現在地を表示](./firmware/current-pose/)しながら走行する。   |
 | 24       | 9マスの渦巻き状の迷路を[側面の壁を表示](./firmware/wall-state/)しながら走行する。   |
 | 25       | [BNO055 9軸センサ](./firmware/9axis-sensor/)を接続する。                            |
+| 26       | [UARTにHello, worldを出力](./firmware/uart/)する。                                  |
 
 Body
 
