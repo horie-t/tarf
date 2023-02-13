@@ -2,16 +2,23 @@
 #![no_main]
 
 use panic_halt as _;
-use wio_terminal as wio;
 
+use core::fmt::Write;
+
+use cortex_m::interrupt::{free as disable_interrupts, CriticalSection};
 use cortex_m::peripheral::NVIC;
+
+use heapless::consts::*;
+use heapless::spsc::Queue;
+
+use wio_terminal as wio;
 use wio::hal::clock::GenericClockController;
+use wio::hal::delay::Delay;
 use wio::hal::gpio::*;
-use wio::hal::hal::serial::*;
 use wio::hal::timer::TimerCounter;
-use wio::pac::{interrupt, Peripherals, TC3, TC5};
+use wio::pac::{CorePeripherals, interrupt, Peripherals, TC5};
 use wio::prelude::*;
-use wio::{entry, Pins, Sets};
+use wio::{entry, Pins, UART};
 
 
 
@@ -45,9 +52,15 @@ struct Ctx {
 }
 static mut CTX: Option<Ctx> = None;
 
+pub struct SensorEvent {
+    pub x: f32
+}
+static mut EVENT_QUEUE: Queue<SensorEvent, U16> = Queue(heapless::i::Queue::new());
+
 #[entry]
 fn main() -> ! {
     let mut peripherals = Peripherals::take().unwrap();
+    let core = CorePeripherals::take().unwrap();
     let mut clocks = GenericClockController::with_external_32kosc(
         peripherals.GCLK,
         &mut peripherals.MCLK,
@@ -55,8 +68,24 @@ fn main() -> ! {
         &mut peripherals.OSCCTRL,
         &mut peripherals.NVMCTRL,
     );
+    let mut delay = Delay::new(core.SYST, &mut clocks);  
 
-    let mut sets: Sets = Pins::new(peripherals.PORT).split();
+    let mut pins = Pins::new(peripherals.PORT);
+
+    let uart = UART {
+        tx: pins.txd,
+        rx: pins.rxd
+    };
+    let mut serial = uart.init(
+        &mut clocks,
+        115200.hz(),
+        peripherals.SERCOM2,
+        &mut peripherals.MCLK,
+        &mut pins.port
+    );
+
+    delay.delay_ms(1000u32);
+
     let gclk5 = clocks
         .get_gclk(wio::pac::gclk::pchctrl::GEN_A::GCLK5)
         .unwrap();
@@ -67,17 +96,22 @@ fn main() -> ! {
         NVIC::unmask(interrupt::TC5);
     }
 
-    tc5.start(2.s());
+    tc5.start(3.s());
     tc5.enable_interrupt();
+
+    writeln!(&mut serial, "Hello, Tarf!\r").unwrap();
 
     unsafe {
         CTX = Some(Ctx {
-            led: Led::new(sets.user_led, &mut sets.port),
+            led: Led::new(pins.user_led, &mut pins.port),
             tc5,
         });
     }
 
     loop {
+        if let Some(val) = disable_interrupts(|cs| unsafe { EVENT_QUEUE.split().1.dequeue()}) {
+            writeln!(&mut serial, "val: {}\r", val.x).unwrap();
+        }
     }
 }
 
@@ -85,8 +119,12 @@ fn main() -> ! {
 #[interrupt]
 fn TC5() {
     unsafe {
-        let ctx = CTX.as_mut().unwrap();
-        ctx.tc5.wait().unwrap();
-        ctx.led.toggle();
+        disable_interrupts(|cs| unsafe {
+            let ctx = CTX.as_mut().unwrap();
+            ctx.tc5.wait().unwrap();
+            ctx.led.toggle();
+            let mut q = EVENT_QUEUE.split().0;
+            q.enqueue(SensorEvent { x: 16.0_f32 }).ok();
+        });
     }
 }
