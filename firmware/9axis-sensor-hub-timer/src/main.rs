@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 
+use mint::EulerAngles;
 use panic_halt as _;
 
 use core::fmt::Write;
@@ -65,7 +66,7 @@ struct NineAxisSensor<'a> {
 static mut CTX: Option<NineAxisSensor> = None;
 
 pub struct SensorEvent {
-    pub x: f32
+    pub angles: EulerAngles<f32, ()>
 }
 
 static mut I2C_SWITCH: Option<Xca9548a<SensorI2C>> = None;
@@ -125,7 +126,7 @@ fn main() -> ! {
         NVIC::unmask(interrupt::TC5);
     }
 
-    tc5.start(3.s());
+    tc5.start(10.ms());
     tc5.enable_interrupt();
 
     writeln!(&mut serial, "Hello, Tarf!\r").unwrap();
@@ -148,7 +149,7 @@ fn main() -> ! {
 
     loop {
         if let Some(val) = disable_interrupts(|cs| unsafe { EVENT_QUEUE.split().1.dequeue()}) {
-            writeln!(&mut serial, "val: {}\r", val.x).unwrap();
+           writeln!(&mut serial, "a: {}, b: {}, c: {}\r", val.angles.a, val.angles.b, val.angles.c).unwrap();
         }
     }
 }
@@ -156,13 +157,13 @@ fn main() -> ! {
 
 #[interrupt]
 fn TC5() {
-    unsafe {
-        disable_interrupts(|cs| unsafe {
-            let ctx = CTX.as_mut().unwrap();
-            ctx.tc5.wait().unwrap();
-            ctx.led.toggle();
-            let mut q = EVENT_QUEUE.split().0;
-            q.enqueue(SensorEvent { x: 16.0_f32 }).ok();
-        });
-    }
+    disable_interrupts(|cs| unsafe {
+        let ctx = CTX.as_mut().unwrap();
+        ctx.tc5.wait().unwrap();
+        ctx.led.toggle();
+        let mut q = EVENT_QUEUE.split().0;
+        if let Some(val) = ctx.sensor.euler_angles().ok() {
+            q.enqueue(SensorEvent { angles: val }).ok();
+        }
+    });
 }
