@@ -1,0 +1,11 @@
+[package]
+name = "l-chika-3"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+panic-halt = "0.2.0"
+wio_terminal = "0.7.0"
+embedded-hal = { tag="embedded-hal-v1.0.0-rc.3", git = "https://github.com/rust-embedded/embedded-hal" }
