@@ -92,7 +92,9 @@ Firmware
 | 24       | 9マスの渦巻き状の迷路を[側面の壁を表示](./firmware/wall-state/)しながら走行する。   |
 | 25       | [BNO055 9軸センサ](./firmware/9axis-sensor/)を接続する。                            |
 | 26       | [UARTにHello, worldを出力](./firmware/uart/)する。                                  |
-| 25       | [9軸センサをI2Cハブ](./firmware/9axis-sensor-hub/)に接続する。                            |
+| 25       | [9軸センサをI2Cハブ](./firmware/9axis-sensor-hub/)に接続する。                      |
+| ***      | 以降、設計見直し                                                                    |
+| 26       | [内蔵LEDでLチカ(その3)](./firmware/l-chika-3)をしてみる。                           |
 
 
 Body
